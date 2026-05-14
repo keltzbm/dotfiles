@@ -1,0 +1,208 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║              Alacritty Configuration                        ║
+# ║              Theme: Catppuccin Latte                        ║
+# ╚══════════════════════════════════════════════════════════════╝
+#
+# Location (macOS):   ~/.config/alacritty/alacritty.toml
+# Location (Windows): %APPDATA%\alacritty\alacritty.toml
+#   or WSL2 symlink:  ~/.config/alacritty/alacritty.toml → /mnt/c/Users/<you>/AppData/Roaming/alacritty/alacritty.toml
+
+# ── General ────────────────────────────────────────────────────
+
+[general]
+import = []                     # Add extra config files here if you split configs
+
+# ── Window ─────────────────────────────────────────────────────
+
+[window]
+padding          = { x = 12, y = 12 }
+decorations      = "buttonless"     # macOS: hides title bar, keeps traffic lights
+opacity          = 1.0
+blur             = false            # Set true if you want background blur (macOS)
+startup_mode     = "Windowed"
+title            = "Alacritty"
+dynamic_title    = true             # Show current directory/process in title bar
+
+[window.dimensions]
+columns = 80     # VT100 standard — the original 80-column terminal
+lines   = 24     # VT100 standard — 24 lines
+
+# ── Scrolling ──────────────────────────────────────────────────
+
+[scrolling]
+history    = 10000   # Lines of scrollback (tmux handles most of this anyway)
+multiplier = 3       # Lines scrolled per mouse wheel tick
+
+# ── Font ───────────────────────────────────────────────────────
+# Requires a Nerd Font for icons in Neovim/Starship.
+# Recommended: JetBrainsMono Nerd Font, FiraCode Nerd Font, or Hack Nerd Font
+# Download from: https://www.nerdfonts.com/font-downloads
+
+[font]
+size = 14.0
+
+[font.normal]
+family = "JetBrainsMono Nerd Font"
+style  = "Regular"
+
+[font.bold]
+family = "JetBrainsMono Nerd Font"
+style  = "Bold"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font"
+style  = "Italic"
+
+[font.bold_italic]
+family = "JetBrainsMono Nerd Font"
+style  = "Bold Italic"
+
+[font.offset]
+x = 0
+y = 1    # Slight line height increase for readability
+
+# ── Cursor ─────────────────────────────────────────────────────
+
+[cursor]
+unfocused_hollow = true     # Hollow cursor when window loses focus
+
+[cursor.style]
+shape     = "Block"         # Block | Underline | Beam
+blinking  = "On"
+
+[cursor.vi_mode_style]
+shape    = "Block"
+blinking = "Off"
+
+# ── Terminal ───────────────────────────────────────────────────
+
+[terminal]
+osc52 = "CopyPaste"    # Allow OSC 52 clipboard access (useful over SSH/tmux)
+
+# ── Selection ──────────────────────────────────────────────────
+
+[selection]
+save_to_clipboard   = false    # true = auto-copy selected text
+semantic_escape_chars = ",│`|:\"' ()[]{}<>\t"
+
+# ── Mouse ──────────────────────────────────────────────────────
+
+[mouse]
+hide_when_typing = true
+
+# ── Keyboard Shortcuts ─────────────────────────────────────────
+# Note: tmux handles most splits/tabs. These are Alacritty-level bindings.
+
+[[keyboard.bindings]]
+key   = "V"
+mods  = "Command"
+action = "Paste"
+
+[[keyboard.bindings]]
+key   = "C"
+mods  = "Command"
+action = "Copy"
+
+[[keyboard.bindings]]
+key   = "Q"
+mods  = "Command"
+action = "Quit"
+
+[[keyboard.bindings]]
+key   = "N"
+mods  = "Command"
+action = "CreateNewWindow"
+
+[[keyboard.bindings]]
+key   = "Return"
+mods  = "Command|Shift"
+action = "ToggleFullscreen"
+
+# Increase/decrease font size
+[[keyboard.bindings]]
+key   = "Plus"
+mods  = "Command"
+action = "IncreaseFontSize"
+
+[[keyboard.bindings]]
+key   = "Minus"
+mods  = "Command"
+action = "DecreaseFontSize"
+
+[[keyboard.bindings]]
+key   = "Key0"
+mods  = "Command"
+action = "ResetFontSize"
+
+# ── Colors: Catppuccin Latte ───────────────────────────────────
+# Palette: https://github.com/catppuccin/catppuccin
+# Latte is the light variant — warm cream background with rich, saturated accents.
+
+[colors]
+draw_bold_text_with_bright_colors = true
+
+[colors.primary]
+background = "#eff1f5"   # Base
+foreground = "#4c4f69"   # Text
+
+[colors.cursor]
+text   = "#eff1f5"       # Base
+cursor = "#dc8a78"       # Rosewater
+
+[colors.vi_mode_cursor]
+text   = "#eff1f5"
+cursor = "#7287fd"       # Lavender
+
+[colors.search.matches]
+foreground = "#eff1f5"
+background = "#1e66f5"   # Blue
+
+[colors.search.focused_match]
+foreground = "#eff1f5"
+background = "#40a02b"   # Green
+
+[colors.footer_bar]
+foreground = "#eff1f5"
+background = "#4c4f69"
+
+[colors.hints.start]
+foreground = "#eff1f5"
+background = "#df8e1d"   # Yellow
+
+[colors.hints.end]
+foreground = "#eff1f5"
+background = "#179299"   # Teal
+
+[colors.selection]
+text       = "#eff1f5"
+background = "#7287fd"   # Lavender
+
+[colors.normal]
+black   = "#5c5f77"      # Subtext1
+red     = "#d20f39"      # Red
+green   = "#40a02b"      # Green
+yellow  = "#df8e1d"      # Yellow
+blue    = "#1e66f5"      # Blue
+magenta = "#8839ef"      # Mauve
+cyan    = "#179299"      # Teal
+white   = "#acb0be"      # Surface2
+
+[colors.bright]
+black   = "#6c6f85"      # Overlay0
+red     = "#d20f39"
+green   = "#40a02b"
+yellow  = "#df8e1d"
+blue    = "#1e66f5"
+magenta = "#8839ef"
+cyan    = "#04a5e5"      # Sky
+white   = "#bcc0cc"      # Surface1
+
+[colors.dim]
+black   = "#9ca0b0"      # Overlay0
+red     = "#d20f39"
+green   = "#40a02b"
+yellow  = "#df8e1d"
+blue    = "#1e66f5"
+magenta = "#8839ef"
+cyan    = "#179299"
+white   = "#acb0be"

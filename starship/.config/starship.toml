@@ -1,0 +1,125 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║              Starship Configuration                          ║
+# ║              Theme: Catppuccin Latte (minimal)               ║
+# ╚══════════════════════════════════════════════════════════════╝
+#
+# Location: ~/.config/starship.toml
+add_newline = false
+format = "$directory$git_branch $character"
+
+palette = "catppuccin_latte"
+
+[palettes.catppuccin_latte]
+rosewater = "#dc8a78"
+flamingo = "#dd7878"
+pink = "#ea76cb"
+mauve = "#8839ef"
+red = "#d20f39"
+maroon = "#e64553"
+peach = "#fe640b"
+yellow = "#df8e1d"
+green = "#40a02b"
+teal = "#179299"
+sky = "#04a5e5"
+sapphire = "#209fb5"
+blue = "#1e66f5"
+lavender = "#7287fd"
+text = "#4c4f69"
+subtext1 = "#5c5f77"
+subtext0 = "#6c6f85"
+overlay2 = "#7c7f93"
+overlay1 = "#8c8fa1"
+overlay0 = "#9ca0b0"
+surface2 = "#acb0be"
+surface1 = "#bcc0cc"
+surface0 = "#ccd0da"
+base = "#eff1f5"
+mantle = "#e6e9ef"
+crust = "#dce0e8"
+
+# ── Prompt Layout ──────────────────────────────────────────────
+# Clean single line — directory, git info, language, then cursor
+# format = "${directory}${character}"
+
+# ── Directory ──────────────────────────────────────────────────
+[directory]
+style = "bold blue"
+# format = "[$path ]($style)"
+format = "[$path]($style)"
+truncation_length = 3
+truncate_to_repo = true
+
+# ── Git ────────────────────────────────────────────────────────
+[git_branch]
+symbol = " "
+style = "teal"
+format = "[$symbol$branch]($style)"
+
+[git_status]
+style = "yellow"
+format = "[$all_status$ahead_behind]($style) "
+modified = "!${count} "
+staged = "+${count} "
+untracked = "?${count} "
+deleted = "✘${count} "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+conflicted = "⚡"
+stashed = " "
+
+# ── Languages ──────────────────────────────────────────────────
+[nodejs]
+symbol = " "
+style = "green"
+format = "[$symbol$version ]($style)"
+
+[python]
+symbol = " "
+style = "green"
+format = "[$symbol$version ]($style)"
+python_binary = ["python3", "python"]
+
+[rust]
+symbol = " "
+style = "green"
+format = "[$symbol$version ]($style)"
+
+[golang]
+symbol = " "
+style = "green"
+format = "[$symbol$version ]($style)"
+
+[java]
+symbol = " "
+style = "green"
+format = "[$symbol$version ]($style)"
+
+# ── Command Duration ───────────────────────────────────────────
+
+[cmd_duration]
+min_time = 2000
+format = "[󱦟 $duration](subtext0) "
+
+# ── Prompt Character ───────────────────────────────────────────
+
+[character]
+disabled = false 
+success_symbol = ": "
+error_symbol = ": "
+# success_symbol = "[❯](bold green)"
+# error_symbol = "[❯](bold red)"
+# vimcmd_symbol = "[❮](bold lavender)"
+
+# ── Disabled ───────────────────────────────────────────────────
+
+[username]
+disabled = true
+
+[os]
+disabled = true
+
+[time]
+disabled = true
+
+[package]
+disabled = true

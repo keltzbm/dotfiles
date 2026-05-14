@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Neovim
+*.swp
+*.swo
+.netrwhist
+
+# tmux
+tmux-resurrect/
+
+# Logs
+*.log
+
+# Environment files - never commit these
+.env
+.env.local
+.env.*
+
+# OS
+Thumbs.db
+Desktop.ini
