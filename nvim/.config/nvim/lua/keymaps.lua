@@ -46,3 +46,6 @@ map("n", "<leader>fr", "<cmd>Telescope oldfiles<CR>", { desc = "Recent files" })
 
 -- Show keymaps
 map("n", "<leader>?", "<cmd>WhichKey<CR>", { desc = "Show keymaps" })
+
+-- Close current buffer without closing window
+map("n", "<leader>x", "<cmd>bp|bd #<CR>", { desc = "Close buffer" })
