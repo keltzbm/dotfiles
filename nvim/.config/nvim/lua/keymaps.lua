@@ -49,3 +49,14 @@ map("n", "<leader>?", "<cmd>WhichKey<CR>", { desc = "Show keymaps" })
 
 -- Close current buffer without closing window
 map("n", "<leader>x", "<cmd>bp|bd #<CR>", { desc = "Close buffer" })
+
+-- LSP
+map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+map("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
+map("n", "gr", vim.lsp.buf.references, { desc = "Go to references" })
+map("n", "K", vim.lsp.buf.hover, { desc = "Hover docs" })
+map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
+map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
+map("n", "[d", vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
+map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
+map("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show diagnostic" })

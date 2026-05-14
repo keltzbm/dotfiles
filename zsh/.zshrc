@@ -1,5 +1,7 @@
+export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
 # Path
 export PATH="$HOME/.local/bin:$PATH"
+
 
 # pyenv
 export PYENV_ROOT="$HOME/.pyenv"
