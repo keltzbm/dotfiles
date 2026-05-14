@@ -59,7 +59,11 @@ require("lazy").setup({
 					position = "left",
 				},
 				filesystem = {
-					hide_dotfiles = false,
+					filtered_items = {
+						visible = true,
+						hide_dotfiles = false,
+						hide_gitignored = false,
+					},
 					follow_current_file = {
 						enabled = true,
 					},
@@ -71,7 +75,16 @@ require("lazy").setup({
 		"folke/which-key.nvim",
 		event = "VeryLazy",
 		config = function()
-			require("which-key").setup()
+			require("which-key").setup({
+				delay = 0,
+			})
+		end,
+	},
+	{
+		"nvim-telescope/telescope.nvim",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		config = function()
+			require("telescope").setup()
 		end,
 	},
 })
