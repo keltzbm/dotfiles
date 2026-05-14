@@ -16,3 +16,7 @@ alias ll="eza --icons --group-directories-first --long"
 alias la="eza --icons --group-directories-first --long --all"
 alias lt="eza --icons --tree --level=2"
 alias lta="eza --icons --tree --level=3"
+
+# vi and vim mapped to nvim
+alias vi="nvim"
+alias vim="nvim"
