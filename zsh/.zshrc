@@ -1,3 +1,6 @@
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+cd ~
+
 export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
 # Path
 export PATH="$HOME/.local/bin:$PATH"
@@ -21,4 +24,9 @@ alias lta="eza --icons --tree --level=3"
 
 # vi and vim mapped to nvim
 alias vi="nvim"
-alias vim="nvim"
+
+HISTSIZE=10000
+SAVEHIST=10000
+HISTFILE=~/.zsh_history
+setopt HIST_IGNORE_DUPS
+setopt SHARE_HISTORY
