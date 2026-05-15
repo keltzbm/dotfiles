@@ -7,4 +7,10 @@
 	name = Brandon M. Keltz
 	email = keltzbm@icloud.com
 [core]
-	excludesfile = /Users/keltzbm/.gitignore_global
+	excludesfile = ~/.gitignore_global
+[diff]
+	tool = nvimdiff
+[difftool "nvimdiff"]
+	cmd = nvim -d \"$LOCAL\" \"$REMOTE\"
+[difftool]
+	prompt = false

@@ -13,6 +13,7 @@ if not vim.loop.fs_stat(lazypath) then
 	})
 end
 vim.opt.rtp:prepend(lazypath)
+
 -- Plugins
 require("lazy").setup({
 	{
@@ -75,6 +76,9 @@ require("lazy").setup({
 		config = function()
 			require("which-key").setup({
 				delay = 0,
+				triggers = {
+					{ "<leader>", mode = { "n" } }, -- only show for leader in normal mode
+				},
 			})
 		end,
 	},
