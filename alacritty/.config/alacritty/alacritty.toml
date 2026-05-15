@@ -10,28 +10,36 @@
 # ── General ────────────────────────────────────────────────────
 
 [general]
-import = []                     # Add extra config files here if you split configs
+# Add extra config files here if you split configs
+import = []
 
 # ── Window ─────────────────────────────────────────────────────
 
 [window]
-padding          = { x = 12, y = 12 }
-decorations      = "buttonless"     # macOS: hides title bar, keeps traffic lights
-opacity          = 1.0
-blur             = false            # Set true if you want background blur (macOS)
-startup_mode     = "Windowed"
-title            = "Alacritty"
-dynamic_title    = true             # Show current directory/process in title bar
+padding = { x = 12, y = 12 }
+# macOS: hides title bar, keeps traffic lights
+decorations = "buttonless"
+opacity = 1.0
+# Set true if you want background blur (macOS)
+blur = false
+startup_mode = "Windowed"
+title = "Alacritty"
+# Show current directory/process in title bar
+dynamic_title = true
 
 [window.dimensions]
-columns = 80     # VT100 standard — the original 80-column terminal
-lines   = 24     # VT100 standard — 24 lines
+# VT100 standard — the original 80-column terminal
+columns = 80
+# VT100 standard — 24 lines
+lines = 24
 
 # ── Scrolling ──────────────────────────────────────────────────
 
-[scrolling]
-history    = 10000   # Lines of scrollback (tmux handles most of this anyway)
-multiplier = 3       # Lines scrolled per mouse wheel tick
+    [scrolling]
+# Lines of scrollback (tmux handles most of this anyway)
+history = 10000
+# Lines scrolled per mouse wheel tick
+multiplier = 3
 
 # ── Font ───────────────────────────────────────────────────────
 # Requires a Nerd Font for icons in Neovim/Starship.
@@ -43,46 +51,51 @@ size = 14.0
 
 [font.normal]
 family = "JetBrainsMono Nerd Font"
-style  = "Regular"
+style = "Regular"
 
 [font.bold]
 family = "JetBrainsMono Nerd Font"
-style  = "Bold"
+style = "Bold"
 
 [font.italic]
 family = "JetBrainsMono Nerd Font"
-style  = "Italic"
+style = "Italic"
 
 [font.bold_italic]
 family = "JetBrainsMono Nerd Font"
-style  = "Bold Italic"
+style = "Bold Italic"
 
 [font.offset]
 x = 0
-y = 1    # Slight line height increase for readability
+#  Slight line height increase for readability
+y = 1
 
 # ── Cursor ─────────────────────────────────────────────────────
 
 [cursor]
-unfocused_hollow = true     # Hollow cursor when window loses focus
+#  Hollow cursor when window loses focus
+unfocused_hollow = true
 
 [cursor.style]
-shape     = "Block"         # Block | Underline | Beam
-blinking  = "On"
+#  Block | Underline | Beam
+shape = "Block"
+blinking = "On"
 
 [cursor.vi_mode_style]
-shape    = "Block"
+shape = "Block"
 blinking = "Off"
 
 # ── Terminal ───────────────────────────────────────────────────
 
 [terminal]
-osc52 = "CopyPaste"    # Allow OSC 52 clipboard access (useful over SSH/tmux)
+#  Allow OSC 52 clipboard access (useful over SSH/tmux)
+osc52 = "CopyPaste"
 
 # ── Selection ──────────────────────────────────────────────────
 
 [selection]
-save_to_clipboard   = false    # true = auto-copy selected text
+#  true = auto-copy selected text
+save_to_clipboard = false
 semantic_escape_chars = ",│`|:\"' ()[]{}<>\t"
 
 # ── Mouse ──────────────────────────────────────────────────────
@@ -94,44 +107,44 @@ hide_when_typing = true
 # Note: tmux handles most splits/tabs. These are Alacritty-level bindings.
 
 [[keyboard.bindings]]
-key   = "V"
-mods  = "Command"
+key = "V"
+mods = "Command"
 action = "Paste"
 
 [[keyboard.bindings]]
-key   = "C"
-mods  = "Command"
+key = "C"
+mods = "Command"
 action = "Copy"
 
 [[keyboard.bindings]]
-key   = "Q"
-mods  = "Command"
+key = "Q"
+mods = "Command"
 action = "Quit"
 
 [[keyboard.bindings]]
-key   = "N"
-mods  = "Command"
+key = "N"
+mods = "Command"
 action = "CreateNewWindow"
 
 [[keyboard.bindings]]
-key   = "Return"
-mods  = "Command|Shift"
+key = "Return"
+mods = "Command|Shift"
 action = "ToggleFullscreen"
 
 # Increase/decrease font size
 [[keyboard.bindings]]
-key   = "Plus"
-mods  = "Command"
+key = "Plus"
+mods = "Command"
 action = "IncreaseFontSize"
 
 [[keyboard.bindings]]
-key   = "Minus"
-mods  = "Command"
+key = "Minus"
+mods = "Command"
 action = "DecreaseFontSize"
 
 [[keyboard.bindings]]
-key   = "Key0"
-mods  = "Command"
+key = "Key0"
+mods = "Command"
 action = "ResetFontSize"
 
 # ── Colors: Catppuccin Latte ───────────────────────────────────
@@ -146,11 +159,11 @@ background = "#eff1f5"   # Base
 foreground = "#4c4f69"   # Text
 
 [colors.cursor]
-text   = "#eff1f5"       # Base
+text = "#eff1f5"       # Base
 cursor = "#dc8a78"       # Rosewater
 
 [colors.vi_mode_cursor]
-text   = "#eff1f5"
+text = "#eff1f5"
 cursor = "#7287fd"       # Lavender
 
 [colors.search.matches]
@@ -174,35 +187,35 @@ foreground = "#eff1f5"
 background = "#179299"   # Teal
 
 [colors.selection]
-text       = "#eff1f5"
+text = "#eff1f5"
 background = "#7287fd"   # Lavender
 
 [colors.normal]
-black   = "#5c5f77"      # Subtext1
-red     = "#d20f39"      # Red
-green   = "#40a02b"      # Green
-yellow  = "#df8e1d"      # Yellow
-blue    = "#1e66f5"      # Blue
+black = "#5c5f77"      # Subtext1
+red = "#d20f39"      # Red
+green = "#40a02b"      # Green
+yellow = "#df8e1d"      # Yellow
+blue = "#1e66f5"      # Blue
 magenta = "#8839ef"      # Mauve
-cyan    = "#179299"      # Teal
-white   = "#acb0be"      # Surface2
+cyan = "#179299"      # Teal
+white = "#acb0be"      # Surface2
 
 [colors.bright]
-black   = "#6c6f85"      # Overlay0
-red     = "#d20f39"
-green   = "#40a02b"
-yellow  = "#df8e1d"
-blue    = "#1e66f5"
+black = "#6c6f85"      # Overlay0
+red = "#d20f39"
+green = "#40a02b"
+yellow = "#df8e1d"
+blue = "#1e66f5"
 magenta = "#8839ef"
-cyan    = "#04a5e5"      # Sky
-white   = "#bcc0cc"      # Surface1
+cyan = "#04a5e5"      # Sky
+white = "#bcc0cc"      # Surface1
 
 [colors.dim]
-black   = "#9ca0b0"      # Overlay0
-red     = "#d20f39"
-green   = "#40a02b"
-yellow  = "#df8e1d"
-blue    = "#1e66f5"
+black = "#9ca0b0"      # Overlay0
+red = "#d20f39"
+green = "#40a02b"
+yellow = "#df8e1d"
+blue = "#1e66f5"
 magenta = "#8839ef"
-cyan    = "#179299"
-white   = "#acb0be"
+cyan = "#179299"
+white = "#acb0be"

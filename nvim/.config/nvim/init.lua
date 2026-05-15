@@ -77,7 +77,8 @@ require("lazy").setup({
 			require("which-key").setup({
 				delay = 0,
 				triggers = {
-					{ "<leader>", mode = { "n" } }, -- only show for leader in normal mode
+					-- only show for leader in normal mode
+					{ "<leader>", mode = { "n" } },
 				},
 			})
 		end,

@@ -60,3 +60,43 @@ map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
 map("n", "[d", vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
 map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
 map("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show diagnostic" })
+
+-- Move end of line comments above for selected lines
+map("v", "<leader>cl", function()
+	local start_row = vim.fn.getpos("v")[2]
+	local end_row = vim.fn.getpos(".")[2]
+
+	if start_row > end_row then
+		start_row, end_row = end_row, start_row
+	end
+
+	local patterns = {
+		"^(.-)%s*%-%-(.*)$",
+		"^(.-)%s*#(.*)$",
+		"^(.-)%s*//(.*)$",
+	}
+
+	local new_lines = {}
+	for row = start_row, end_row do
+		local result = vim.api.nvim_buf_get_lines(0, row - 1, row, false)
+		local line = result[1]
+		if line then
+			local indent = line:match("^(%s*)")
+			local matched = false
+			for _, pattern in ipairs(patterns) do
+				local code, comment = line:match(pattern)
+				if code and comment and code ~= "" then
+					table.insert(new_lines, indent .. vim.bo.commentstring:format(comment))
+					table.insert(new_lines, code)
+					matched = true
+					break
+				end
+			end
+			if not matched then
+				table.insert(new_lines, line)
+			end
+		end
+	end
+
+	vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
+end, { desc = "Move comments above lines" })
