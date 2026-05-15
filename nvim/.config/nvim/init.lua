@@ -1,6 +1,5 @@
 require("options")
 require("keymaps")
-
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
@@ -14,7 +13,6 @@ if not vim.loop.fs_stat(lazypath) then
 	})
 end
 vim.opt.rtp:prepend(lazypath)
-
 -- Plugins
 require("lazy").setup({
 	{
@@ -88,6 +86,35 @@ require("lazy").setup({
 		end,
 	},
 	{
+		"williamboman/mason.nvim",
+		lazy = false,
+		config = function()
+			require("mason").setup()
+			local servers = {
+				"lua-language-server",
+				"pyright",
+				"typescript-language-server",
+				"bash-language-server",
+			}
+			local registry = require("mason-registry")
+			for _, server in ipairs(servers) do
+				local pkg = registry.get_package(server)
+				if not pkg:is_installed() then
+					pkg:install()
+				end
+			end
+		end,
+	},
+	{
+		"williamboman/mason-lspconfig.nvim",
+		dependencies = { "williamboman/mason.nvim" },
+		config = function()
+			require("mason-lspconfig").setup({
+				automatic_enable = true,
+			})
+		end,
+	},
+	{
 		"neovim/nvim-lspconfig",
 		dependencies = {
 			"williamboman/mason.nvim",
@@ -112,9 +139,9 @@ require("lazy").setup({
 	{
 		"hrsh7th/nvim-cmp",
 		dependencies = {
-			"hrsh7th/cmp-nvim-lsp", -- LSP completions
-			"hrsh7th/cmp-buffer", -- Buffer word completions
-			"hrsh7th/cmp-path", -- File path completions
+			"hrsh7th/cmp-nvim-lsp",
+			"hrsh7th/cmp-buffer",
+			"hrsh7th/cmp-path",
 		},
 		config = function()
 			local cmp = require("cmp")
