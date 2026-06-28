@@ -169,4 +169,17 @@ require("lazy").setup({
 			})
 		end,
 	},
+	{
+		"toppair/peek.nvim",
+		build = "deno task --quiet build:fast",
+		ft = { "markdown" },
+		config = function()
+			require("peek").setup({
+				app = "browser",
+				theme = "light",
+			})
+			vim.api.nvim_create_user_command("PeekOpen", require("peek").open, {})
+			vim.api.nvim_create_user_command("PeekClose", require("peek").close, {})
+		end,
+	},
 })

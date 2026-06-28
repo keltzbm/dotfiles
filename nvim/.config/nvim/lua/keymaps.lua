@@ -37,6 +37,10 @@ map("n", "<leader>e", "<cmd>Neotree toggle<CR>", { desc = "Toggle file explorer"
 
 -- Normalize spacing around = signs
 map("v", "<leader>=", [[:s/\v\s*\=\s*/\ \=\ /g<CR>]], { desc = "Normalize = spacing" })
+-- Normalize spacing around : signs
+map("v", "<leader>:", [[:s/\v\s*\:\s*/\: /g<CR>]], { desc = "Normalize : spacing" })
+-- Normalize spacing around , signs
+map("v", "<leader>,", [[:s/\v\s*\,\s*/\, /g<CR>]], { desc = "Normalize , spacing" })
 
 -- Telescope
 map("n", "<leader>ff", "<cmd>Telescope find_files<CR>", { desc = "Find files" })
@@ -100,3 +104,87 @@ map("v", "<leader>cl", function()
 
 	vim.api.nvim_buf_set_lines(0, start_row - 1, end_row, false, new_lines)
 end, { desc = "Move comments above lines" })
+
+-- Markdown
+map("n", "<leader>mp", "<cmd>PeekOpen<CR>", { desc = "Toggle markdown preview" })
+
+-- Toggle 80 column ruler
+map("n", "<leader>tc", function()
+	if vim.o.colorcolumn == "" then
+		vim.o.colorcolumn = "80"
+	else
+		vim.o.colorcolumn = ""
+	end
+end, { desc = "Toggle column ruler" })
+
+-- -- run current file
+-- map("n", "<leader>rf", function()
+-- 	local ft = vim.bo.filetype
+-- 	local file = vim.fn.expand("%")
+-- 	if ft == "python" then
+-- 		vim.cmd("!" .. "python3 " .. file)
+-- 	elseif ft == "lua" then
+-- 		vim.cmd("source " .. file)
+-- 	elseif ft == "sh" or ft == "bash" then
+-- 		vim.cmd("!" .. "bash " .. file)
+-- 	elseif ft == "javascript" then
+-- 		vim.cmd("!" .. "node " .. file)
+-- 	elseif ft == "rust" then
+-- 		vim.cmd("!" .. "cargo run")
+-- 	elseif ft == "go" then
+-- 		vim.cmd("!" .. "go run " .. file)
+-- 	else
+-- 		print("no runner configured for " .. ft)
+-- 	end
+-- end, { desc = "Run current file" })
+
+-- Run current file in terminal split
+map("n", "<leader>rr", function()
+	local ft = vim.bo.filetype
+	local file = vim.fn.expand("%")
+	local cmd = nil
+
+	if ft == "python" then
+		cmd = "python3 " .. file
+	elseif ft == "sh" or ft == "bash" then
+		cmd = "bash " .. file
+	elseif ft == "javascript" then
+		cmd = "node " .. file
+	elseif ft == "rust" then
+		cmd = "cargo run"
+	elseif ft == "go" then
+		cmd = "go run " .. file
+	else
+		print("No runner configured for " .. ft)
+		return
+	end
+
+	vim.cmd("split | terminal " .. cmd)
+end, { desc = "Run current file (horizontal)" })
+
+-- Run current file in terminal split
+map("n", "<leader>rv", function()
+	local ft = vim.bo.filetype
+	local file = vim.fn.expand("%")
+	local cmd = nil
+
+	if ft == "python" then
+		cmd = "python3 " .. file
+	elseif ft == "sh" or ft == "bash" then
+		cmd = "bash " .. file
+	elseif ft == "javascript" then
+		cmd = "node " .. file
+	elseif ft == "rust" then
+		cmd = "cargo run"
+	elseif ft == "go" then
+		cmd = "go run " .. file
+	else
+		print("No runner configured for " .. ft)
+		return
+	end
+
+	vim.cmd("vsplit | terminal " .. cmd)
+end, { desc = "Run current file (vertical)" })
+
+-- Remove trailing whitespace
+map("n", "<leader>cw", "<cmd>%s/\\s\\+$//e<CR>", { desc = "Remove trailing whitespace" })
