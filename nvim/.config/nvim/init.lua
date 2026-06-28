@@ -56,6 +56,42 @@ require("lazy").setup({
 				window = {
 					width = 30,
 					position = "left",
+					mappings = {
+						["<cr>"] = function(state)
+							local node = state.tree:get_node()
+
+							-- directories: toggle as normal
+							if node.type == "directory" then
+								state.commands["toggle_node"](state)
+								return
+							end
+
+							-- find the non-neo-tree window's buffer
+							local target_buf = nil
+							for _, win in ipairs(vim.api.nvim_list_wins()) do
+								local buf = vim.api.nvim_win_get_buf(win)
+								if vim.bo[buf].filetype ~= "neo-tree" then
+									target_buf = buf
+									break
+								end
+							end
+
+							-- check if that buffer is empty and unnamed
+							local is_empty = false
+							if target_buf then
+								local name = vim.api.nvim_buf_get_name(target_buf)
+								local lines = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
+								is_empty = name == "" and (#lines <= 1 and (lines[1] == nil or lines[1] == ""))
+							end
+
+							local cmds = require("neo-tree.sources.common.commands")
+							if is_empty then
+								cmds.open(state)
+							else
+								cmds.open_vsplit(state)
+							end
+						end,
+					},
 				},
 				filesystem = {
 					filtered_items = {

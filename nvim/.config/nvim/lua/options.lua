@@ -1,5 +1,9 @@
 local opt = vim.opt
 
+-- Time out length for repeated keys
+vim.o.ttimeoutlen = 0
+vim.o.timeoutlen = 300
+
 -- Line numbers
 opt.number = true
 opt.relativenumber = true
@@ -28,6 +32,7 @@ opt.incsearch = true
 opt.scrolloff = 8
 opt.wrap = false
 opt.cursorline = true
+opt.cursorcolumn = false
 opt.signcolumn = "yes"
 
 -- Splits

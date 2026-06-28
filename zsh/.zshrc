@@ -37,19 +37,7 @@ setopt SHARE_HISTORY
 export BROWSER="explorer.exe"
 
 
-# Create a new Python project
-pyproject() {
-    mkdir -p "$1"
-    cd "$1"
-    python3 -m venv .venv
-    source .venv/bin/activate
-    touch main.py
-    touch requirements.txt
-    echo ".venv/" > .gitignore
-    echo "__pycache__/" >> .gitignore
-    echo "*.pyc" >> .gitignore
-    git init
-    echo "Python project $1 created!"
-}
 
 unset zle_bracketed_paste
+
+for f in ~/.config/zsh/functions/*.zsh(N); do source "$f"; done
