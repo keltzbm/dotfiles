@@ -59,3 +59,6 @@ unset zle_bracketed_paste
 if [[ "$(uname)" == "Linux" ]]; then
   export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
 fi
+
+# Silence pip's "new release available" nag on every install
+export PIP_DISABLE_PIP_VERSION_CHECK=1
