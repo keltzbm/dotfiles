@@ -53,3 +53,9 @@ pyproject() {
 }
 
 unset zle_bracketed_paste
+
+# Ensure system pkg-config is visible alongside Homebrew's (fixes builds
+# that need apt-installed dev libraries, e.g. fontconfig, tcl/tk)
+if [[ "$(uname)" == "Linux" ]]; then
+  export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
+fi
