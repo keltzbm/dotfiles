@@ -16,3 +16,6 @@
 	prompt = false
 [init]
 	defaultBranch = main
+
+[includeIf "gitdir:~/GitLab/"]
+    path = ~/.gitconfig-gitlab

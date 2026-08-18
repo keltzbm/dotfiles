@@ -11,5 +11,6 @@ stow --target=$HOME alacritty
 stow --target=$HOME starship
 stow --target=$HOME tmux
 stow --target=$HOME zsh
+stow --target=$HOME git
 
 echo "Dotfiles synced!"
