@@ -127,6 +127,11 @@ mods = "Command"
 action = "CreateNewWindow"
 
 [[keyboard.bindings]]
+key = "N"
+mods = "Control|Shift"
+action = "CreateNewWindow"
+
+[[keyboard.bindings]]
 key = "Return"
 mods = "Command|Shift"
 action = "ToggleFullscreen"
