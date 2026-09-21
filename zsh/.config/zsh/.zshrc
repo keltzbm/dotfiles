@@ -72,3 +72,33 @@ gitzip() {
   git -C "$root" archive --format=zip --prefix="$name/" -o "$PWD/$name.zip" HEAD \
     && echo "→ $PWD/$name.zip"
 }
+
+# Zip a git repo, excluding everything .gitignore excludes
+zipgit() {
+    local dir="${1:-.}"
+    local abs_path
+    abs_path="$(cd "$dir" && pwd)" || return 1
+    local repo_name="$(basename "$abs_path")"
+    local parent_dir="$(dirname "$abs_path")"
+    local out_zip="${2:-$repo_name.zip}"
+
+    if ! git -C "$abs_path" rev-parse --git-dir >/dev/null 2>&1; then
+        echo "zipgit: '$dir' is not a git repository"
+        return 1
+    fi
+
+    if [[ "$out_zip" != /* ]]; then
+        out_zip="$(pwd)/$out_zip"
+    fi
+
+    rm -f "$out_zip"
+
+    (
+        cd "$parent_dir" || return 1
+        git -C "$repo_name" ls-files --cached --others --exclude-standard \
+            | sed "s|^|$repo_name/|" \
+            | zip "$out_zip" -@ >/dev/null
+    )
+
+    echo "zipped $repo_name -> $out_zip"
+}
