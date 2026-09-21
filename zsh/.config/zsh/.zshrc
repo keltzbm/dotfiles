@@ -62,3 +62,13 @@ fi
 
 # Silence pip's "new release available" nag on every install
 export PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Zip a git repo's committed contents (no .git, respects .gitignore)
+gitzip() {
+  local repo=${1:-.}
+  local root name
+  root=$(git -C "$repo" rev-parse --show-toplevel) || return 1
+  name=${root:t}
+  git -C "$root" archive --format=zip --prefix="$name/" -o "$PWD/$name.zip" HEAD \
+    && echo "→ $PWD/$name.zip"
+}

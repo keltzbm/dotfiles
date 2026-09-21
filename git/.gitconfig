@@ -19,3 +19,5 @@
 
 [includeIf "gitdir:~/GitLab/"]
     path = ~/.gitconfig-gitlab
+[url "git@github.com:"]
+	insteadOf = https://github.com/

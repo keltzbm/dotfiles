@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd ~/GitHub/dotfiles
+cd ~/atelier/github/dotfiles
 git pull
 
 OS="$(uname)"
