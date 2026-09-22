@@ -1,69 +1,103 @@
-if [ -f /opt/homebrew/bin/brew ]; then
+# ~/.config/zsh/.zshrc
+
+# ─────────────────────────────────────────────────────────────
+# Homebrew
+# ─────────────────────────────────────────────────────────────
+if [[ -x /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [ -f /home/linuxbrew/.linuxbrew/bin/brew ]; then
+elif [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
-cd ~
 
-export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
-# Path
-export PATH="$HOME/.local/bin:$PATH"
+# ─────────────────────────────────────────────────────────────
+# PATH
+# ─────────────────────────────────────────────────────────────
+typeset -U path PATH   # drop duplicate entries (e.g. in nested shells)
 
+path=(
+  "$HOME/.local/bin"
+  "$HOME/.local/share/nvim/mason/bin"
+  $path
+)
 
+# ─────────────────────────────────────────────────────────────
+# Platform-specific settings
+# ─────────────────────────────────────────────────────────────
+case "$(uname)" in
+  Darwin)
+    # Keep the Mac awake (display, idle, and system sleep on AC)
+    alias awake='caffeinate -dis'
+    ;;
+  Linux)
+    # Ensure system pkg-config is visible alongside Homebrew's (fixes builds
+    # that need apt-installed dev libraries, e.g. fontconfig, tcl/tk)
+    export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
+
+    # WSL only: open links in the Windows browser
+    if [[ -n "$WSL_DISTRO_NAME" ]]; then
+      export BROWSER="explorer.exe"
+    fi
+    ;;
+esac
+
+# ─────────────────────────────────────────────────────────────
+# Tools
+# ─────────────────────────────────────────────────────────────
 # pyenv
 export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+path=("$PYENV_ROOT/bin" $path)
+if command -v pyenv >/dev/null; then
+  eval "$(pyenv init - zsh)"
+fi
 
-export PROMPT_EOL_MARK=""
+# Silence pip's "new release available" nag on every install
+export PIP_DISABLE_PIP_VERSION_CHECK=1
 
-eval "$(starship init zsh)"
+# ─────────────────────────────────────────────────────────────
+# History
+# ─────────────────────────────────────────────────────────────
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt SHARE_HISTORY
 
-# eza aliases
+# ─────────────────────────────────────────────────────────────
+# Shell behavior
+# ─────────────────────────────────────────────────────────────
+export PROMPT_EOL_MARK=""   # hide the % marker after output without a newline
+unset zle_bracketed_paste
+
+# ─────────────────────────────────────────────────────────────
+# Aliases
+# ─────────────────────────────────────────────────────────────
+# eza
 alias ls="eza --icons --group-directories-first"
 alias ll="eza --icons --group-directories-first --long"
 alias la="eza --icons --group-directories-first --long --all"
 alias lt="eza --icons --tree --level=2"
 alias lta="eza --icons --tree --level=3"
 
-# vi and vim mapped to nvim
+# Editor
 alias vi="nvim"
+alias vim="nvim"
 
-HISTSIZE=10000
-SAVEHIST=10000
-HISTFILE=~/.zsh_history
-setopt HIST_IGNORE_DUPS
-setopt SHARE_HISTORY
-export BROWSER="explorer.exe"
-
-
-# Create a new Python project
+# ─────────────────────────────────────────────────────────────
+# Functions
+# ─────────────────────────────────────────────────────────────
+# Create a new Python project with a venv, stub files, and git
 pyproject() {
-    mkdir -p "$1"
-    cd "$1"
-    python3 -m venv .venv
-    source .venv/bin/activate
-    touch main.py
-    touch requirements.txt
-    echo ".venv/" > .gitignore
-    echo "__pycache__/" >> .gitignore
-    echo "*.pyc" >> .gitignore
-    git init
-    echo "Python project $1 created!"
+  [[ -z "$1" ]] && { echo "usage: pyproject <name>"; return 1; }
+  mkdir -p "$1" && cd "$1" || return 1
+  python3 -m venv .venv
+  source .venv/bin/activate
+  touch main.py requirements.txt
+  printf '%s\n' ".venv/" "__pycache__/" "*.pyc" > .gitignore
+  git init
+  echo "Python project $1 created!"
 }
 
-unset zle_bracketed_paste
-
-# Ensure system pkg-config is visible alongside Homebrew's (fixes builds
-# that need apt-installed dev libraries, e.g. fontconfig, tcl/tk)
-if [[ "$(uname)" == "Linux" ]]; then
-  export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
-fi
-
-# Silence pip's "new release available" nag on every install
-export PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Zip a git repo's committed contents (no .git, respects .gitignore)
+# Zip a repo's last commit (HEAD only; no .git, no uncommitted changes)
 gitzip() {
   local repo=${1:-.}
   local root name
@@ -73,32 +107,37 @@ gitzip() {
     && echo "→ $PWD/$name.zip"
 }
 
-# Zip a git repo, excluding everything .gitignore excludes
+# Zip a repo's working tree (tracked + untracked files, minus .gitignore'd)
 zipgit() {
-    local dir="${1:-.}"
-    local abs_path
-    abs_path="$(cd "$dir" && pwd)" || return 1
-    local repo_name="$(basename "$abs_path")"
-    local parent_dir="$(dirname "$abs_path")"
-    local out_zip="${2:-$repo_name.zip}"
+  local dir="${1:-.}"
+  local abs_path repo_name parent_dir out_zip
+  abs_path="$(cd "$dir" && pwd)" || return 1
+  repo_name="${abs_path:t}"
+  parent_dir="${abs_path:h}"
+  out_zip="${2:-$repo_name.zip}"
 
-    if ! git -C "$abs_path" rev-parse --git-dir >/dev/null 2>&1; then
-        echo "zipgit: '$dir' is not a git repository"
-        return 1
-    fi
+  if ! git -C "$abs_path" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "zipgit: '$dir' is not a git repository"
+    return 1
+  fi
 
-    if [[ "$out_zip" != /* ]]; then
-        out_zip="$(pwd)/$out_zip"
-    fi
+  [[ "$out_zip" != /* ]] && out_zip="$PWD/$out_zip"
+  rm -f "$out_zip"
 
-    rm -f "$out_zip"
+  (
+    cd "$parent_dir" || return 1
+    git -C "$repo_name" ls-files --cached --others --exclude-standard \
+      | sed "s|^|$repo_name/|" \
+      | zip "$out_zip" -@ >/dev/null
+  )
 
-    (
-        cd "$parent_dir" || return 1
-        git -C "$repo_name" ls-files --cached --others --exclude-standard \
-            | sed "s|^|$repo_name/|" \
-            | zip "$out_zip" -@ >/dev/null
-    )
-
-    echo "zipped $repo_name -> $out_zip"
+  echo "→ $out_zip"
 }
+
+# ─────────────────────────────────────────────────────────────
+# Startup
+# ─────────────────────────────────────────────────────────────
+cd ~
+
+# Prompt (keep last)
+eval "$(starship init zsh)"
