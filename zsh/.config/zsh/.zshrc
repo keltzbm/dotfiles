@@ -53,6 +53,9 @@ fi
 # Silence pip's "new release available" nag on every install
 export PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# eza: show mount points as bold blue instead of underlined
+export EZA_COLORS="mp=1;34"
+
 # ─────────────────────────────────────────────────────────────
 # History
 # ─────────────────────────────────────────────────────────────
@@ -67,6 +70,7 @@ setopt SHARE_HISTORY
 # ─────────────────────────────────────────────────────────────
 export PROMPT_EOL_MARK=""   # hide the % marker after output without a newline
 unset zle_bracketed_paste
+setopt INTERACTIVE_COMMENTS # allow # comments at the prompt
 
 # ─────────────────────────────────────────────────────────────
 # Aliases
