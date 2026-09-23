@@ -21,7 +21,7 @@ if ! command -v brew &> /dev/null; then
 fi
 
 echo "Installing Homebrew packages..."
-brew install stow zsh tmux neovim starship pyenv eza bat fd ripgrep fzf zoxide deno git
+brew install stow zsh tmux neovim starship pyenv eza bat fd ripgrep fzf zoxide deno git uv gh
 
 # Rust toolchain + latest tagged Alacritty source (used by both platforms' from-source builds)
 ensure_rust() {

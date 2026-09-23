@@ -89,17 +89,8 @@ alias vim="nvim"
 # ─────────────────────────────────────────────────────────────
 # Functions
 # ─────────────────────────────────────────────────────────────
-# Create a new Python project with a venv, stub files, and git
-pyproject() {
-  [[ -z "$1" ]] && { echo "usage: pyproject <name>"; return 1; }
-  mkdir -p "$1" && cd "$1" || return 1
-  python3 -m venv .venv
-  source .venv/bin/activate
-  touch main.py requirements.txt
-  printf '%s\n' ".venv/" "__pycache__/" "*.pyc" > .gitignore
-  git init
-  echo "Python project $1 created!"
-}
+# Scaffold a new Python repo (src layout, uv, ruff, pytest, pre-commit, CI)
+source "${ZDOTDIR:-$HOME/.config/zsh}/functions/newrepo.zsh"
 
 # Zip a repo's last commit (HEAD only; no .git, no uncommitted changes)
 gitzip() {
