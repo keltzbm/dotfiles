@@ -65,6 +65,22 @@ map("n", "[d", vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
 map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
 map("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show diagnostic" })
 
+-- Signature help: what arguments does this function take?
+map({ "n", "i" }, "<C-s>", vim.lsp.buf.signature_help, { desc = "Signature help" })
+
+-- Completion: silence the as-you-type menu in this buffer (<C-Space> still works)
+map("n", "<leader>ta", function()
+	local cmp = require("cmp")
+	local on = vim.b.cmp_autocomplete ~= false
+	cmp.setup.buffer({
+		completion = {
+			autocomplete = (not on) and { cmp.TriggerEvent.TextChanged } or false,
+		},
+	})
+	vim.b.cmp_autocomplete = not on
+	print("autocomplete " .. (on and "off" or "on") .. " (buffer)")
+end, { desc = "Toggle autocomplete in buffer" })
+
 -- Move end of line comments above for selected lines
 map("v", "<leader>cl", function()
 	local start_row = vim.fn.getpos("v")[2]
