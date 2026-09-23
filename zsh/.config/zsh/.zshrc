@@ -92,6 +92,9 @@ alias vim="nvim"
 # Scaffold a new Python repo (src layout, uv, ruff, pytest, pre-commit, CI)
 source "${ZDOTDIR:-$HOME/.config/zsh}/functions/newrepo.zsh"
 
+# Activate/switch/deactivate the nearest .venv without stacking activations
+source "${ZDOTDIR:-$HOME/.config/zsh}/functions/venv.zsh"
+
 # Zip a repo's last commit (HEAD only; no .git, no uncommitted changes)
 gitzip() {
   local repo=${1:-.}
