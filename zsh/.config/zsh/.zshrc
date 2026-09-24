@@ -88,42 +88,8 @@ source "${ZDOTDIR:-$HOME/.config/zsh}/functions/newrepo.zsh"
 # Activate/switch/deactivate the nearest .venv without stacking activations
 source "${ZDOTDIR:-$HOME/.config/zsh}/functions/venv.zsh"
 
-# Zip a repo's last commit (HEAD only; no .git, no uncommitted changes)
-gitzip() {
-  local repo=${1:-.}
-  local root name
-  root=$(git -C "$repo" rev-parse --show-toplevel) || return 1
-  name=${root:t}
-  git -C "$root" archive --format=zip --prefix="$name/" -o "$PWD/$name.zip" HEAD \
-    && echo "→ $PWD/$name.zip"
-}
-
-# Zip a repo's working tree (tracked + untracked files, minus .gitignore'd)
-zipgit() {
-  local dir="${1:-.}"
-  local abs_path repo_name parent_dir out_zip
-  abs_path="$(cd "$dir" && pwd)" || return 1
-  repo_name="${abs_path:t}"
-  parent_dir="${abs_path:h}"
-  out_zip="${2:-$repo_name.zip}"
-
-  if ! git -C "$abs_path" rev-parse --git-dir >/dev/null 2>&1; then
-    echo "zipgit: '$dir' is not a git repository"
-    return 1
-  fi
-
-  [[ "$out_zip" != /* ]] && out_zip="$PWD/$out_zip"
-  rm -f "$out_zip"
-
-  (
-    cd "$parent_dir" || return 1
-    git -C "$repo_name" ls-files --cached --others --exclude-standard \
-      | sed "s|^|$repo_name/|" \
-      | zip "$out_zip" -@ >/dev/null
-  )
-
-  echo "→ $out_zip"
-}
+# Zip a repo for sharing: working tree + .git by default (--no-git, --head)
+source "${ZDOTDIR:-$HOME/.config/zsh}/functions/gitzip.zsh"
 
 # ─────────────────────────────────────────────────────────────
 # Startup
