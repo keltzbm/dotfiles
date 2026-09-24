@@ -13,6 +13,9 @@ Icon
 # tmux
 tmux-resurrect/
 
+# zsh (generated completion cache)
+.zcompdump*
+
 # Logs
 *.log
 
