@@ -16,8 +16,9 @@
 	prompt = false
 [init]
 	defaultBranch = main
-
-[includeIf "gitdir:~/GitLab/"]
-    path = ~/.gitconfig-gitlab
 [url "git@github.com:"]
 	insteadOf = https://github.com/
+[includeIf "gitdir:~/atelier/github/"]
+	path = ~/.gitconfig-personal
+[includeIf "gitdir:~/atelier/gitlab/"]
+	path = ~/.gitconfig-gitlab
