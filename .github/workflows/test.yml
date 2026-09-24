@@ -1,0 +1,32 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install tools (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh stow tmux shellcheck zip unzip
+          # apt's Neovim is too old for this config (needs 0.11+); use the release build
+          curl -fsSL https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz \
+            | sudo tar xz -C /opt
+          echo /opt/nvim-linux-x86_64/bin >> "$GITHUB_PATH"
+
+      - name: Install tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install stow tmux shellcheck neovim
+
+      - name: Run tests
+        run: zsh tests/run.zsh --nvim

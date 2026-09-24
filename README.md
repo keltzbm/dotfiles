@@ -18,7 +18,8 @@ Each top-level folder is a Stow package laid out the way its files sit in `~`.
 | `starship`  | Prompt                                  | `~/.config/starship.toml`             |
 | `git`       | Git config, global ignore file          | `~/.gitconfig`, `~/.gitignore_global` |
 
-Also at the root: `install.sh` (setup) and `.stowrc` (points Stow at `~`).
+Also at the root: `install.sh` (setup), `tests/` (checks, below) and
+`.stowrc` (points Stow at `~`).
 
 ## Install
 
@@ -51,7 +52,32 @@ Each holds a `[user]` block (name, email). Repos anywhere else use the
 - New file in an existing package: usually nothing to do, since Stow links
   whole folders where it can; otherwise `stow -R <package>`.
 - New package: create `<tool>/<path as it sits in ~>`, then add the folder
-  to the `for pkg in …` list in `install.sh`.
+  to the `for pkg in …` list in `install.sh`. A test checks the two match.
+
+## Tests
+
+```bash
+zsh tests/run.zsh          # about 5 seconds
+zsh tests/run.zsh --nvim   # also starts Neovim with this config (downloads plugins)
+```
+
+Everything runs in a throwaway folder with its own `$HOME`, so it never
+touches your real setup. It checks:
+
+- **Syntax:** zsh, bash (plus shellcheck), Lua, TOML and tmux files all parse.
+- **Stow:** every package stows cleanly into an empty home, `.stowrc` points
+  at `~`, and `install.sh` stows exactly the packages that exist.
+- **Shell startup:** `.zshrc` starts without errors, keeps the folder it
+  starts in, stays in emacs keys, and keeps its cache out of the repo.
+- **Functions:** `gitzip`, `newrepo` and `venv` behave as the cheat sheet
+  says, run against throwaway repos and folders.
+- **Docs:** every function, alias and Neovim mapping is in the cheat sheet,
+  and every `<leader>` mapping the cheat sheet lists still exists.
+- **Neovim** (with `--nvim`): plugins install at the `lazy-lock.json`
+  versions and a file opens without errors.
+
+Checks whose tool isn't installed are skipped rather than failed. GitHub
+Actions runs the full suite on Ubuntu and macOS for every push.
 
 ## Notes
 
