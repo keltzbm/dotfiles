@@ -7,12 +7,6 @@
 # Location (Windows): %APPDATA%\alacritty\alacritty.toml
 #   or WSL2 symlink:  ~/.config/alacritty/alacritty.toml → /mnt/c/Users/<you>/AppData/Roaming/alacritty/alacritty.toml
 
-# ── General ────────────────────────────────────────────────────
-
-[general]
-# Add extra config files here if you split configs
-import = []
-
 # ── Window ─────────────────────────────────────────────────────
 
 [window]
@@ -35,7 +29,7 @@ lines = 24
 
 # ── Scrolling ──────────────────────────────────────────────────
 
-    [scrolling]
+[scrolling]
 # Lines of scrollback (tmux handles most of this anyway)
 history = 10000
 # Lines scrolled per mouse wheel tick
@@ -88,8 +82,9 @@ blinking = "Off"
 # ── Terminal ───────────────────────────────────────────────────
 
 [terminal]
-#  Allow OSC 52 clipboard access (useful over SSH/tmux)
-osc52 = "CopyPaste"
+#  Let programs (tmux, ssh sessions) write to the clipboard via OSC 52.
+#  Not "CopyPaste": that would also let them read it.
+osc52 = "OnlyCopy"
 
 # ── Selection ──────────────────────────────────────────────────
 
@@ -105,27 +100,10 @@ hide_when_typing = true
 
 # ── Keyboard Shortcuts ─────────────────────────────────────────
 # Note: tmux handles most splits/tabs. These are Alacritty-level bindings.
+# Alacritty already maps Cmd+C/V/N/Q and Cmd+0/=/- (font size) on macOS,
+# and Ctrl+Shift+C/V on Linux/Windows; only additions live here.
 
-[[keyboard.bindings]]
-key = "V"
-mods = "Command"
-action = "Paste"
-
-[[keyboard.bindings]]
-key = "C"
-mods = "Command"
-action = "Copy"
-
-[[keyboard.bindings]]
-key = "Q"
-mods = "Command"
-action = "Quit"
-
-[[keyboard.bindings]]
-key = "N"
-mods = "Command"
-action = "CreateNewWindow"
-
+# New window, with a shortcut that also works off macOS
 [[keyboard.bindings]]
 key = "N"
 mods = "Control|Shift"
@@ -135,22 +113,6 @@ action = "CreateNewWindow"
 key = "Return"
 mods = "Command|Shift"
 action = "ToggleFullscreen"
-
-# Increase/decrease font size
-[[keyboard.bindings]]
-key = "Plus"
-mods = "Command"
-action = "IncreaseFontSize"
-
-[[keyboard.bindings]]
-key = "Minus"
-mods = "Command"
-action = "DecreaseFontSize"
-
-[[keyboard.bindings]]
-key = "Key0"
-mods = "Command"
-action = "ResetFontSize"
 
 # ── Colors: Catppuccin Latte ───────────────────────────────────
 # Palette: https://github.com/catppuccin/catppuccin

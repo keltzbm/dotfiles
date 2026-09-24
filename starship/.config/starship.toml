@@ -4,6 +4,9 @@
 # ╚══════════════════════════════════════════════════════════════╝
 #
 # Location: ~/.config/starship.toml
+#
+# Prompt: folder, git branch, then ":". Add $git_status or $cmd_duration to
+# `format` to show those modules too.
 add_newline = false
 format = "$directory$git_branch $character"
 
@@ -37,14 +40,9 @@ base = "#eff1f5"
 mantle = "#e6e9ef"
 crust = "#dce0e8"
 
-# ── Prompt Layout ──────────────────────────────────────────────
-# Clean single line — directory, git info, language, then cursor
-# format = "${directory}${character}"
-
 # ── Directory ──────────────────────────────────────────────────
 [directory]
 style = "bold blue"
-# format = "[$path ]($style)"
 format = "[$path]($style)"
 truncation_length = 3
 truncate_to_repo = true
@@ -55,71 +53,7 @@ symbol = " "
 style = "teal"
 format = "[$symbol$branch]($style)"
 
-[git_status]
-style = "yellow"
-format = "[$all_status$ahead_behind]($style) "
-modified = "!${count} "
-staged = "+${count} "
-untracked = "?${count} "
-deleted = "✘${count} "
-ahead = "⇡${count} "
-behind = "⇣${count} "
-conflicted = "⚡"
-stashed = " "
-
-# ── Languages ──────────────────────────────────────────────────
-[nodejs]
-symbol = " "
-style = "green"
-format = "[$symbol$version ]($style)"
-
-[python]
-symbol = " "
-style = "green"
-format = "[$symbol$version ]($style)"
-python_binary = ["python3", "python"]
-
-[rust]
-symbol = " "
-style = "green"
-format = "[$symbol$version ]($style)"
-
-[golang]
-symbol = " "
-style = "green"
-format = "[$symbol$version ]($style)"
-
-[java]
-symbol = " "
-style = "green"
-format = "[$symbol$version ]($style)"
-
-# ── Command Duration ───────────────────────────────────────────
-
-[cmd_duration]
-min_time = 2000
-format = "[󱦟 $duration](subtext0) "
-
 # ── Prompt Character ───────────────────────────────────────────
-
 [character]
-disabled = false 
 success_symbol = ":"
 error_symbol = ":"
-# success_symbol = "[❯](bold green)"
-# error_symbol = "[❯](bold red)"
-# vimcmd_symbol = "[❮](bold lavender)"
-
-# ── Disabled ───────────────────────────────────────────────────
-
-[username]
-disabled = true
-
-[os]
-disabled = true
-
-[time]
-disabled = true
-
-[package]
-disabled = true

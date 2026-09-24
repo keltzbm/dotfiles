@@ -1,38 +1,12 @@
-# macOS
+# macOS (git/.gitignore_global covers every repo; repeated for a fresh clone)
 .DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
 
-# Neovim
-*.swp
-*.swo
-.netrwhist
-
-# tmux
-tmux-resurrect/
-
-# zsh (generated completion cache)
+# Caches that can land here through Stow's folded directories
 .zcompdump*
 
-# Logs
-*.log
-
-# Environment files - never commit these
+# Secrets — never commit
 .env
-.env.local
 .env.*
-
-# OS
-Thumbs.db
-Desktop.ini
-
-# Lock files
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-.DS_Store
 
 # Private keys — a backstop, since gitzip ships untracked files
 id_*
