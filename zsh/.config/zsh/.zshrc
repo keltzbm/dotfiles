@@ -43,13 +43,6 @@ esac
 # ─────────────────────────────────────────────────────────────
 # Tools
 # ─────────────────────────────────────────────────────────────
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-path=("$PYENV_ROOT/bin" $path)
-if command -v pyenv >/dev/null; then
-  eval "$(pyenv init - zsh)"
-fi
-
 # Silence pip's "new release available" nag on every install
 export PIP_DISABLE_PIP_VERSION_CHECK=1
 

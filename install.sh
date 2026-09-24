@@ -21,7 +21,12 @@ if ! command -v brew &> /dev/null; then
 fi
 
 echo "Installing Homebrew packages..."
-brew install stow zsh tmux neovim starship pyenv eza bat fd ripgrep fzf zoxide deno git uv gh
+brew install stow zsh tmux neovim starship eza bat fd ripgrep fzf zoxide deno git uv gh
+
+# Python comes from uv: `python` and `python3` in ~/.local/bin (on PATH via .zshrc).
+# Projects pin their own version in .python-version; this is the default everywhere else.
+echo "Installing Python..."
+uv python install 3.14 --default
 
 # Rust toolchain + latest tagged Alacritty source (used by both platforms' from-source builds)
 ensure_rust() {
