@@ -2,7 +2,7 @@ require("options")
 require("keymaps")
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
 	vim.fn.system({
 		"git",
 		"clone",
@@ -37,7 +37,7 @@ require("lazy").setup({
 				},
 				format_on_save = {
 					timeout_ms = 500,
-					lsp_fallback = true,
+					lsp_format = "fallback",
 				},
 			})
 		end,
@@ -91,30 +91,19 @@ require("lazy").setup({
 		end,
 	},
 	{
-		"williamboman/mason.nvim",
+		"mason-org/mason.nvim",
 		lazy = false,
 		config = function()
 			require("mason").setup()
-			local servers = {
-				"lua-language-server",
-				"pyright",
-				"typescript-language-server",
-				"bash-language-server",
-			}
-			local registry = require("mason-registry")
-			for _, server in ipairs(servers) do
-				local pkg = registry.get_package(server)
-				if not pkg:is_installed() then
-					pkg:install()
-				end
-			end
 		end,
 	},
 	{
-		"williamboman/mason-lspconfig.nvim",
-		dependencies = { "williamboman/mason.nvim" },
+		"mason-org/mason-lspconfig.nvim",
+		dependencies = { "mason-org/mason.nvim" },
 		config = function()
+			-- Installs these on first launch, and enables every installed server
 			require("mason-lspconfig").setup({
+				ensure_installed = { "lua_ls", "pyright", "ts_ls", "bashls" },
 				automatic_enable = true,
 			})
 		end,
@@ -122,8 +111,8 @@ require("lazy").setup({
 	{
 		"neovim/nvim-lspconfig",
 		dependencies = {
-			"williamboman/mason.nvim",
-			"williamboman/mason-lspconfig.nvim",
+			"mason-org/mason.nvim",
+			"mason-org/mason-lspconfig.nvim",
 			"hrsh7th/cmp-nvim-lsp",
 		},
 		config = function()
@@ -146,10 +135,8 @@ require("lazy").setup({
 				},
 			})
 
+			-- cmd/filetypes/root markers come from nvim-lspconfig; only add settings
 			vim.lsp.config("lua_ls", {
-				cmd = { "lua-language-server" },
-				filetypes = { "lua" },
-				root_markers = { ".git", ".luarc.json" },
 				settings = {
 					Lua = {
 						diagnostics = {
@@ -158,7 +145,6 @@ require("lazy").setup({
 					},
 				},
 			})
-			vim.lsp.enable("lua_ls")
 		end,
 	},
 	{

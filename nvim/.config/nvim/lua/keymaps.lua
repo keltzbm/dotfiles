@@ -24,8 +24,8 @@ map("n", "<leader>sh", "<cmd>split<CR>", { desc = "Split horizontal" })
 map("v", "<", "<gv", { desc = "Indent left" })
 map("v", ">", ">gv", { desc = "Indent right" })
 
--- Format file manually
-map("n", "<leader>f", function()
+-- Format file manually (not <leader>f: that's the start of ff/fg/fb/fr)
+map("n", "<leader>cf", function()
 	require("conform").format()
 end, { desc = "Format file" })
 
@@ -35,12 +35,12 @@ map("n", "<leader>tw", "<cmd>set list!<CR>", { desc = "Toggle whitespace" })
 -- Toggle file explorer
 map("n", "<leader>e", "<cmd>Neotree toggle<CR>", { desc = "Toggle file explorer" })
 
--- Normalize spacing around = signs
-map("v", "<leader>=", [[:s/\v\s*\=\s*/\ \=\ /g<CR>]], { desc = "Normalize = spacing" })
--- Normalize spacing around : signs
-map("v", "<leader>:", [[:s/\v\s*\:\s*/\: /g<CR>]], { desc = "Normalize : spacing" })
--- Normalize spacing around , signs
-map("v", "<leader>,", [[:s/\v\s*\,\s*/\, /g<CR>]], { desc = "Normalize , spacing" })
+-- Normalize spacing around = , and : in the selected lines. They leave
+-- compound operators (== <= += != := =>), ::, URLs, 12:30 and anything at the
+-- end of a line (no trailing space) alone.
+map("v", "<leader>=", [[:s/\v\s*([-+*/%<>!=:&|^~.])@<!\=(\=|\>)@!\s*(\S)@=/ = /ge<CR>]], { desc = "Normalize = spacing" })
+map("v", "<leader>:", [[:s/\v\s*(:|\d)@<!:(:|\=|\/)@!\s*(\S)@=/: /ge<CR>]], { desc = "Normalize : spacing" })
+map("v", "<leader>,", [[:s/\v\s*,\s*(\S)@=/, /ge<CR>]], { desc = "Normalize , spacing" })
 
 -- Telescope
 map("n", "<leader>ff", "<cmd>Telescope find_files<CR>", { desc = "Find files" })
@@ -54,19 +54,17 @@ map("n", "<leader>?", "<cmd>WhichKey<CR>", { desc = "Show keymaps" })
 -- Close current buffer without closing window
 map("n", "<leader>x", "<cmd>bp|bd #<CR>", { desc = "Close buffer" })
 
--- LSP
+-- LSP. Neovim already maps grr (references), grn (rename), gra (code action),
+-- gri (implementation), grt (type definition), K (hover), [d / ]d
+-- (diagnostics) and insert-mode <C-s> (signature help).
 map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
 map("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
-map("n", "gr", vim.lsp.buf.references, { desc = "Go to references" })
-map("n", "K", vim.lsp.buf.hover, { desc = "Hover docs" })
 map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
 map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
-map("n", "[d", vim.diagnostic.goto_prev, { desc = "Prev diagnostic" })
-map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
 map("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show diagnostic" })
 
--- Signature help: what arguments does this function take?
-map({ "n", "i" }, "<C-s>", vim.lsp.buf.signature_help, { desc = "Signature help" })
+-- Signature help in normal mode too: what arguments does this function take?
+map("n", "<C-s>", vim.lsp.buf.signature_help, { desc = "Signature help" })
 
 -- Completion: silence the as-you-type menu in this buffer (<C-Space> still works)
 map("n", "<leader>ta", function()
@@ -122,7 +120,7 @@ map("v", "<leader>cl", function()
 end, { desc = "Move comments above lines" })
 
 -- Markdown
-map("n", "<leader>mp", "<cmd>PeekOpen<CR>", { desc = "Toggle markdown preview" })
+map("n", "<leader>mp", "<cmd>PeekOpen<CR>", { desc = "Open markdown preview" })
 
 -- Toggle 80 column ruler
 map("n", "<leader>tc", function()
@@ -133,73 +131,31 @@ map("n", "<leader>tc", function()
 	end
 end, { desc = "Toggle column ruler" })
 
--- -- run current file
--- map("n", "<leader>rf", function()
--- 	local ft = vim.bo.filetype
--- 	local file = vim.fn.expand("%")
--- 	if ft == "python" then
--- 		vim.cmd("!" .. "python3 " .. file)
--- 	elseif ft == "lua" then
--- 		vim.cmd("source " .. file)
--- 	elseif ft == "sh" or ft == "bash" then
--- 		vim.cmd("!" .. "bash " .. file)
--- 	elseif ft == "javascript" then
--- 		vim.cmd("!" .. "node " .. file)
--- 	elseif ft == "rust" then
--- 		vim.cmd("!" .. "cargo run")
--- 	elseif ft == "go" then
--- 		vim.cmd("!" .. "go run " .. file)
--- 	else
--- 		print("no runner configured for " .. ft)
--- 	end
--- end, { desc = "Run current file" })
+-- Run the current file in a terminal split (<leader>rr below, <leader>rv beside)
+local runners = {
+	python = "python3 %s",
+	sh = "bash %s",
+	bash = "bash %s",
+	javascript = "node %s",
+	go = "go run %s",
+	rust = "cargo run",
+}
 
--- Run current file in terminal split
+local function run_file(split)
+	local runner = runners[vim.bo.filetype]
+	if not runner then
+		print("No runner configured for " .. vim.bo.filetype)
+		return
+	end
+	local cmd = runner:format(vim.fn.shellescape(vim.fn.expand("%")))
+	vim.cmd(split .. " | terminal " .. cmd)
+end
+
 map("n", "<leader>rr", function()
-	local ft = vim.bo.filetype
-	local file = vim.fn.expand("%")
-	local cmd = nil
-
-	if ft == "python" then
-		cmd = "python3 " .. file
-	elseif ft == "sh" or ft == "bash" then
-		cmd = "bash " .. file
-	elseif ft == "javascript" then
-		cmd = "node " .. file
-	elseif ft == "rust" then
-		cmd = "cargo run"
-	elseif ft == "go" then
-		cmd = "go run " .. file
-	else
-		print("No runner configured for " .. ft)
-		return
-	end
-
-	vim.cmd("split | terminal " .. cmd)
+	run_file("split")
 end, { desc = "Run current file (horizontal)" })
-
--- Run current file in terminal split
 map("n", "<leader>rv", function()
-	local ft = vim.bo.filetype
-	local file = vim.fn.expand("%")
-	local cmd = nil
-
-	if ft == "python" then
-		cmd = "python3 " .. file
-	elseif ft == "sh" or ft == "bash" then
-		cmd = "bash " .. file
-	elseif ft == "javascript" then
-		cmd = "node " .. file
-	elseif ft == "rust" then
-		cmd = "cargo run"
-	elseif ft == "go" then
-		cmd = "go run " .. file
-	else
-		print("No runner configured for " .. ft)
-		return
-	end
-
-	vim.cmd("vsplit | terminal " .. cmd)
+	run_file("vsplit")
 end, { desc = "Run current file (vertical)" })
 
 -- Remove trailing whitespace
