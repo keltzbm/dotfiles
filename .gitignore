@@ -33,3 +33,9 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 .DS_Store
+
+# Private keys — a backstop, since gitzip ships untracked files
+id_*
+!id_*.pub
+*.pem
+*.key

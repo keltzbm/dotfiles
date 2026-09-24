@@ -12,7 +12,7 @@ fi
 # ─────────────────────────────────────────────────────────────
 # PATH
 # ─────────────────────────────────────────────────────────────
-typeset -U path PATH   # drop duplicate entries (e.g. in nested shells)
+typeset -U path PATH fpath FPATH   # drop duplicate entries (e.g. in nested shells)
 
 path=(
   "$HOME/.local/bin"
@@ -23,19 +23,23 @@ path=(
 # ─────────────────────────────────────────────────────────────
 # Platform-specific settings
 # ─────────────────────────────────────────────────────────────
-case "$(uname)" in
-  Darwin)
+case $OSTYPE in
+  darwin*)
     # Keep the Mac awake (display, idle, and system sleep on AC)
     alias awake='caffeinate -dis'
     ;;
-  Linux)
+  linux*)
     # Ensure system pkg-config is visible alongside Homebrew's (fixes builds
-    # that need apt-installed dev libraries, e.g. fontconfig, tcl/tk)
-    export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
+    # that need apt-installed dev libraries, e.g. fontconfig)
+    typeset -TUx PKG_CONFIG_PATH pkg_config_path
+    pkg_config_path=("/usr/lib/$CPUTYPE-linux-gnu/pkgconfig" $pkg_config_path)
 
-    # WSL only: open links in the Windows browser
     if [[ -n "$WSL_DISTRO_NAME" ]]; then
+      # Open links in the Windows browser
       export BROWSER="explorer.exe"
+      # Windows starts WSL in a Windows folder; begin at home instead.
+      # (Scoped to /mnt/c so tmux splits keep their current folder.)
+      [[ $PWD == /mnt/c/* ]] && cd ~
     fi
     ;;
 esac
@@ -64,16 +68,31 @@ setopt SHARE_HISTORY
 export PROMPT_EOL_MARK=""   # hide the % marker after output without a newline
 unset zle_bracketed_paste
 setopt INTERACTIVE_COMMENTS # allow # comments at the prompt
+bindkey -e                  # emacs keys at the prompt (EDITOR=nvim would pick vi)
+
+# ─────────────────────────────────────────────────────────────
+# Completion
+# ─────────────────────────────────────────────────────────────
+# Homebrew tools install their completions here (gh, uv, eza, rg, ...)
+[[ -n "$HOMEBREW_PREFIX" ]] && fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
+
+# Cache lives outside $ZDOTDIR so it never lands in the repo; -i skips any
+# directory compaudit calls insecure instead of stopping startup to ask
+autoload -Uz compinit
+mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+compinit -i -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
 
 # ─────────────────────────────────────────────────────────────
 # Aliases
 # ─────────────────────────────────────────────────────────────
 # eza
-alias ls="eza --icons --group-directories-first"
-alias ll="eza --icons --group-directories-first --long"
-alias la="eza --icons --group-directories-first --long --all"
-alias lt="eza --icons --tree --level=2"
-alias lta="eza --icons --tree --level=3"
+if (( $+commands[eza] )); then
+  alias ls="eza --icons --group-directories-first"
+  alias ll="eza --icons --group-directories-first --long"
+  alias la="eza --icons --group-directories-first --long --all"
+  alias lt="eza --icons --tree --level=2"
+  alias lta="eza --icons --tree --level=3"
+fi
 
 # Editor
 alias vi="nvim"
@@ -92,9 +111,15 @@ source "${ZDOTDIR:-$HOME/.config/zsh}/functions/venv.zsh"
 source "${ZDOTDIR:-$HOME/.config/zsh}/functions/gitzip.zsh"
 
 # ─────────────────────────────────────────────────────────────
-# Startup
+# Integrations (after compinit)
 # ─────────────────────────────────────────────────────────────
-cd ~
+# fzf: Ctrl-R searches history, Ctrl-T picks a file, Alt-C cds into a folder.
+# Terminal only: its script errors in `zsh -i -c` runs with no terminal
+# (editors and tools that read your shell environment do this)
+[[ -t 0 ]] && (( $+commands[fzf] )) && source <(fzf --zsh 2>/dev/null)
+
+# zoxide: `z <part of a path>` jumps to a folder you've visited; `zi` picks one
+(( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 
 # Prompt (keep last)
-eval "$(starship init zsh)"
+(( $+commands[starship] )) && eval "$(starship init zsh)"

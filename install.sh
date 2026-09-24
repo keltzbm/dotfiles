@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Run from wherever the repo lives (~/atelier/github/dotfiles on Mac, ~/GitHub/dotfiles on Linux)
+# Run from wherever the repo lives (~/atelier/github/dotfiles on every machine)
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DOTFILES"
 git pull
@@ -21,17 +21,18 @@ if ! command -v brew &> /dev/null; then
 fi
 
 echo "Installing Homebrew packages..."
-brew install stow zsh tmux neovim starship eza bat fd ripgrep fzf zoxide deno git uv gh
+brew install stow zsh tmux neovim starship eza bat fd ripgrep fzf zoxide deno git git-lfs uv gh stylua
 
 # Python comes from uv: `python` and `python3` in ~/.local/bin (on PATH via .zshrc).
 # Projects pin their own version in .python-version; this is the default everywhere else.
 echo "Installing Python..."
-uv python install 3.14 --default
+uv python install 3.14 --default --preview-features python-install-default
 
 # Rust toolchain + latest tagged Alacritty source (used by both platforms' from-source builds)
 ensure_rust() {
   if ! command -v cargo &> /dev/null; then
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    # shellcheck source=/dev/null
     source "$HOME/.cargo/env"
   fi
 }
@@ -60,20 +61,16 @@ if [[ "$OS" == "Darwin" ]]; then
   ln -sf /Applications/Alacritty.app/Contents/MacOS/alacritty "$HOME/.local/bin/alacritty"
 
 elif [[ "$OS" == "Linux" ]]; then
-  echo "Installing Linux build dependencies..."
+  echo "Installing apt packages..."
   sudo apt update
-  sudo apt install -y \
-    build-essential cmake pkg-config \
-    libfontconfig1-dev libfreetype6-dev \
-    libxcb-xfixes0-dev libxkbcommon-dev \
-    tk-dev tcl-dev gfortran libopenblas-dev liblapack-dev \
-    libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
-    libsqlite3-dev libncursesw5-dev xz-utils \
-    libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+  # zip: gitzip. gfortran + BLAS/LAPACK: packages that compile against them (scipy).
+  sudo apt install -y build-essential pkg-config zip gfortran libopenblas-dev liblapack-dev
 
-  # Alacritty isn't distributed via Homebrew on Linux — build from source
-  if ! command -v alacritty &> /dev/null; then
+  # Alacritty isn't distributed via Homebrew on Linux — build from source.
+  # Skipped under WSL, where Alacritty runs on the Windows side.
+  if [[ -z "$WSL_DISTRO_NAME" ]] && ! command -v alacritty &> /dev/null; then
     echo "Building Alacritty from source..."
+    sudo apt install -y cmake libfontconfig1-dev libfreetype-dev libxcb-xfixes0-dev libxkbcommon-dev
     ensure_rust
     checkout_alacritty
     PKG_CONFIG_PATH="/usr/lib/$(uname -m)-linux-gnu/pkgconfig" cargo build --release
@@ -89,5 +86,10 @@ echo "Stowing dotfiles..."
 for pkg in nvim alacritty starship tmux zsh git; do
   stow --target="$HOME" "$pkg"
 done
+
+# tmux plugin manager + the plugins .tmux.conf lists (skips ones already there)
+echo "Installing tmux plugins..."
+[[ -d "$HOME/.tmux/plugins/tpm" ]] || git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+"$HOME/.tmux/plugins/tpm/bin/install_plugins" > /dev/null
 
 echo "Dotfiles synced!"
