@@ -4,6 +4,20 @@ set -e
 # Run from wherever the repo lives (~/atelier/github/dotfiles on every machine)
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DOTFILES"
+
+# GitHub Codespaces runs this script in every new codespace. Its image already
+# has git and a signed-in gh, so only link the gh extensions there; the full
+# setup below (Homebrew, Alacritty, shell config) is for your own machines.
+if [[ "${CODESPACES:-}" == "true" ]]; then
+  extensions="${XDG_DATA_HOME:-$HOME/.local/share}/gh/extensions"
+  mkdir -p "$extensions"
+  for ext in "$DOTFILES"/gh/.local/share/gh/extensions/gh-*; do
+    ln -sfn "$ext" "$extensions/$(basename "$ext")"
+  done
+  echo "Linked gh extensions for this codespace."
+  exit 0
+fi
+
 git pull
 
 OS="$(uname)"
@@ -21,7 +35,7 @@ if ! command -v brew &> /dev/null; then
 fi
 
 echo "Installing Homebrew packages..."
-brew install stow zsh tmux neovim starship eza bat fd ripgrep fzf zoxide deno git git-lfs uv gh stylua
+brew bundle --file="$DOTFILES/Brewfile" --no-upgrade
 
 # Python comes from uv: `python` and `python3` in ~/.local/bin (on PATH via .zshrc).
 # Projects pin their own version in .python-version; this is the default everywhere else.
@@ -44,8 +58,6 @@ checkout_alacritty() {
 }
 
 if [[ "$OS" == "Darwin" ]]; then
-  brew install --cask font-jetbrains-mono-nerd-font
-
   # Homebrew disabled the alacritty cask (Gatekeeper, 2026-09-01) — build the .app from source
   if [[ ! -d /Applications/Alacritty.app ]]; then
     echo "Building Alacritty from source..."
@@ -83,7 +95,11 @@ elif [[ "$OS" == "Linux" ]]; then
 fi
 
 echo "Stowing dotfiles..."
-for pkg in nvim alacritty starship tmux zsh git; do
+# gh looks for extensions here. Creating it first makes Stow link just the
+# extension folders, not the whole directory (which would put any extension
+# you later install with `gh extension install` inside this repo).
+mkdir -p "$HOME/.local/share/gh/extensions"
+for pkg in nvim alacritty starship tmux zsh git gh; do
   stow --target="$HOME" "$pkg"
 done
 

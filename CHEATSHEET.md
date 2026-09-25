@@ -12,6 +12,11 @@ keybindings.
 - Shell is **zsh**. Three custom commands exist on every machine:
   `gitzip` (zip a repo, with its git history, for sharing), `newrepo`
   (scaffold a Python project) and `venv` (activate the nearest `.venv`).
+- **Changes land through `gh ship`.** Work happens one branch per change;
+  after committing on the branch, `gh ship` pushes it, opens the PR, turns on
+  auto-merge, waits for CI and the merge, then leaves you on an up-to-date
+  `main` with the branch deleted. It's safe to rerun, and exits non-zero if a
+  check fails (fix, commit, run it again). It also works in Codespaces.
 - **Python comes from uv.** `python`/`python3` are uv's 3.14. Projects keep
   their own `.venv`; use `uv sync`, `uv run <cmd>`, `uv add <pkg>` rather
   than pip. `newrepo` projects use a `src/` layout with ruff, mypy, pytest
@@ -22,8 +27,8 @@ keybindings.
 - Repos live in `~/atelier/github/` (personal) and `~/atelier/gitlab/`
   (work); git picks the identity by folder.
 - `ls` is eza, `vi`/`vim` open Neovim, and `EDITOR=nvim`.
-- Installed everywhere: `rg`, `fd`, `bat`, `fzf`, `zoxide`, `eza`, `gh`,
-  `uv`, `deno`, `stow`, `git-lfs`, `stylua`.
+- Installed everywhere (the `Brewfile`): `rg`, `fd`, `bat`, `fzf`, `zoxide`,
+  `eza`, `gh`, `uv`, `deno`, `duckdb`, `shellcheck`, `stow`, `git-lfs`, `stylua`.
 
 ## Shell commands
 
@@ -90,6 +95,38 @@ newrepo <name> [-d "description"] [-p 3.13] [--cli] [--gh] [--public] [--no-sync
 No `.venv` found → error; if there's a `pyproject.toml`, it suggests
 `uv sync`.
 
+### gh ship — land a change on the default branch
+
+```
+gh ship
+```
+
+Run it on a change's branch after committing. It doesn't return until the
+change is merged or something has clearly failed:
+
+1. Refuses on the default branch (read from GitHub, usually `main`) or with
+   no branch checked out.
+2. Pushes the branch and opens a PR (`gh pr create --fill`) unless one is open.
+3. Turns on auto-merge (squash) unless it's already on.
+4. Waits for GitHub to show the pushed commit and start its checks, then
+   watches them (`gh pr checks --watch --fail-fast`).
+5. If a check fails, stops with a non-zero exit and nothing merges. Fix,
+   commit, and run `gh ship` again.
+6. Waits for GitHub to merge, then switches to the branch it merged into,
+   pulls, and deletes the local branch.
+
+- Safe to rerun at any point; Ctrl-C during a wait changes nothing.
+- If the PR is already merged it goes straight to step 6, unless the branch
+  has commits the PR didn't include; then it stops and keeps them.
+- Stops with a message if the PR conflicts with its base or gets closed, or
+  if GitHub hasn't moved on after 5 minutes at any step (the checks
+  themselves can take as long as they need). `GH_SHIP_TIMEOUT=<seconds>`
+  changes the limit.
+- Needs gh 2.29+, and a repo that allows auto-merge and requires a CI check
+  on the default branch.
+- It's a gh extension: Stow links it into `~/.local/share/gh/extensions/`
+  (in Codespaces, install.sh links it by itself).
+
 ### Aliases
 
 | Alias   | Runs                                                    |
@@ -120,6 +157,8 @@ Installed by `install.sh` on every machine (Homebrew).
 | gh         | `gh pr create`, `gh repo view`…  | GitHub CLI                                 |
 | uv         | `uv sync`, `uv run`, `uv add`    | Python versions, venvs, dependencies       |
 | deno       | `deno`                           | JS/TS runtime (builds peek.nvim)           |
+| duckdb     | `duckdb [file.db]`               | SQL on local files (CSV, Parquet, JSON)    |
+| shellcheck | `shellcheck <script>`            | Lint shell scripts (the tests use it)      |
 | git-lfs    | automatic                        | Large files in repos that use LFS          |
 | stylua     | automatic                        | Lua formatter (Neovim formats on save)     |
 | stow       | `stow -R <package>`              | Re-link a dotfiles package                 |
@@ -253,8 +292,11 @@ Plus Alacritty's defaults: `Cmd+C/V/N/Q` and `Cmd+0/=/-` on macOS,
 ## install.sh
 
 Safe to rerun; it's also how a machine gets updates. In order: `git pull`,
-install Homebrew if missing, `brew install` the tools above plus zsh, tmux,
-neovim, starship and git, make uv's Python 3.14 the default, install a few
-apt packages on Linux, build Alacritty from source if it's missing (skipped
-under WSL, where it runs on Windows), stow every package into `~`, then
-install TPM and the tmux plugins.
+install Homebrew if missing, install everything in the `Brewfile`
+(`brew bundle`; the tools above plus zsh, tmux, neovim, starship and git),
+make uv's Python 3.14 the default, install a few apt packages on Linux, build
+Alacritty from source if it's missing (skipped under WSL, where it runs on
+Windows), stow every package into `~`, then install TPM and the tmux plugins.
+
+In a GitHub Codespace it only links the gh extensions (`gh ship`) and stops:
+the codespace image already has git and a signed-in gh.

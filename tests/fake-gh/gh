@@ -1,0 +1,104 @@
+#!/bin/sh
+# Stand-in for gh in tests/run.zsh. It plays GitHub for one repo: $FAKE_GH is
+# a state folder, and $FAKE_GH/remote.git is a real bare repo that `origin`
+# points at. It only understands the calls gh ship makes.
+#
+# Settings (files in $FAKE_GH, all optional):
+#   default     default branch name (main)
+#   head_lag    polls before GitHub shows a newly pushed commit as the PR head
+#   check_lag   polls before GitHub registers checks for the head
+#   merge_lag   polls before GitHub merges once checks have passed
+#   failing     commits whose checks fail, one per line
+#   mergeable   what the PR reports while waiting to merge (MERGEABLE)
+# State it keeps: state (OPEN/MERGED/CLOSED), base, automerge, seen, passed.
+# Every call is appended to $FAKE_GH/calls.
+
+set -u
+S=$FAKE_GH
+echo "$*" >> "$S/calls"
+
+get() { cat "$S/$1" 2>/dev/null || echo "${2:-}"; }
+put() { printf '%s\n' "$2" > "$S/$1"; }
+
+# countdown NAME START: fail the first START calls, then succeed until reset
+countdown() {
+  left=$(get "$1.left" "$2")
+  if [ "$left" -gt 0 ]; then put "$1.left" $((left - 1)); return 1; fi
+  put "$1.left" 0
+}
+
+branch=""
+json=""
+query=""
+cmd="$1 ${2:-}"
+shift 2
+while [ $# -gt 0 ]; do
+  case $1 in
+    --json) json=$2; shift 2 ;;
+    -q) query=$2; shift 2 ;;
+    -*) shift ;;
+    *) branch=$1; shift ;;
+  esac
+done
+[ -n "$branch" ] || branch=$(git branch --show-current)
+pushed=$(git --git-dir="$S/remote.git" rev-parse --verify -q "refs/heads/$branch")
+
+# What GitHub reports as the PR head, lagging a newly pushed commit
+head() {
+  if [ "$(get seen)" != "$pushed" ] && countdown head "$(get head_lag 0)"; then
+    put seen "$pushed"
+    rm -f "$S/head.left" "$S/check.left"
+  fi
+  get seen
+}
+
+merge_now() {
+  w=$(mktemp -d)
+  git clone -q "$S/remote.git" "$w/w"
+  (cd "$w/w" && git checkout -q "$(get base)" && git merge -q --squash "origin/$branch" \
+    && git commit -q -m "$branch (#1)" && git push -q origin "$(get base)") > /dev/null
+  rm -rf "$w"
+  put state MERGED
+}
+
+case $cmd in
+  "repo view")
+    get default main
+    ;;
+  "pr create")
+    [ "$(get state)" != OPEN ] || { echo "a pull request for branch \"$branch\" already exists" >&2; exit 1; }
+    put state OPEN; put base "$(get default main)"; put automerge 0
+    echo "https://github.com/me/repo/pull/1"
+    ;;
+  "pr merge")
+    put automerge 1
+    ;;
+  "pr checks")
+    h=$(head)
+    if grep -qx "$h" "$S/failing" 2>/dev/null; then echo "X  ci  fail"; exit 1; fi
+    echo "✓  ci  pass"; put passed "$h"
+    ;;
+  "pr view")
+    [ -n "$(get state)" ] || { echo "no pull requests found for branch \"$branch\"" >&2; exit 1; }
+    case $json in
+      state) get state ;;
+      baseRefName) get base ;;
+      headRefOid) head ;;
+      autoMergeRequest) [ "$(get automerge)" = 1 ] && echo '{"mergeMethod":"SQUASH"}' ;;
+      statusCheckRollup)
+        if [ "$(head)" = "$pushed" ] && countdown check "$(get check_lag 0)"; then echo 1; else echo 0; fi
+        ;;
+      state,mergeable)
+        if [ "$(get state)" = OPEN ] && [ "$(get automerge)" = 1 ] && [ "$(get passed)" = "$pushed" ] \
+          && countdown merge "$(get merge_lag 0)"; then
+          merge_now
+        fi
+        echo "$(get state) $(get mergeable MERGEABLE)"
+        ;;
+      *) echo "fake gh: unhandled --json $json (-q $query)" >&2; exit 2 ;;
+    esac
+    ;;
+  *)
+    echo "fake gh: unhandled command: $cmd" >&2; exit 2
+    ;;
+esac

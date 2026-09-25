@@ -56,12 +56,19 @@ for f in $REPO/zsh/.zshenv $REPO/zsh/.config/zsh/.zshrc $REPO/zsh/.config/zsh/fu
   check "zsh -n ${f#$REPO/}" zsh -n $f
 done
 
+SHIP=$REPO/gh/.local/share/gh/extensions/gh-ship/gh-ship
 check "bash -n install.sh" bash -n $REPO/install.sh
+check "sh -n gh-ship" sh -n $SHIP
 if have shellcheck; then
-  check "shellcheck install.sh" shellcheck $REPO/install.sh
+  for f in $REPO/install.sh $SHIP $REPO/tests/fake-gh/gh; do
+    check "shellcheck ${f#$REPO/}" shellcheck $f
+  done
 else
-  skip "shellcheck install.sh" "shellcheck not installed"
+  skip "shellcheck" "shellcheck not installed"
 fi
+
+same "Brewfile has only brew/cask lines" \
+  "$(grep -vnE '^[[:space:]]*(#.*)?$|^(brew|cask) "[^"]+"( if OS\.(mac|linux)\?)?$' $REPO/Brewfile)" ""
 
 if have nvim; then
   print -r -- 'local f, err = loadfile(arg[1]); if not f then io.stderr:write(err, "\n"); os.exit(1) end' > $TMP/luacheck.lua
@@ -96,14 +103,18 @@ installed=( ${(z)$(sed -n 's/^for pkg in \(.*\); do$/\1/p' $REPO/install.sh)} )
 same "install.sh stows exactly the package folders" "${(j: :)${(@o)installed}}" "${(j: :)${(@o)packages}}"
 
 if have stow; then
-  H=$TMP/stow-home && mkdir -p $H
+  H=$TMP/stow-home && mkdir -p $H/.local/share/gh/extensions   # install.sh creates this first
   check "all packages stow into an empty home" stow -d $REPO -t $H $packages
   for f in .zshenv .config/zsh/.zshrc .config/nvim/init.lua .tmux.conf .gitconfig \
-           .gitignore_global .config/starship.toml .config/alacritty/alacritty.toml; do
+           .gitignore_global .config/starship.toml .config/alacritty/alacritty.toml \
+           .local/share/gh/extensions/gh-ship/gh-ship; do
     p=$H/$f
     if [[ -e $p && ${p:A} == $REPO/* ]]; then pass "~/$f links into the repo"
     else fail "~/$f links into the repo" "$(ls -la $H/$f 2>&1)"; fi
   done
+  [[ ! -L $H/.local && ! -L $H/.local/share/gh/extensions ]] \
+    && pass "gh's extensions folder stays a real folder (only gh-ship is linked)" \
+    || fail "gh's extensions folder stays a real folder (only gh-ship is linked)" "$(ls -la $H/.local $H/.local/share/gh 2>&1)"
   stow -d $REPO -t $H -D $packages
 
   # .stowrc: plain `stow <pkg>` from the repo should target $HOME
@@ -267,6 +278,132 @@ same "rejects names that don't start with a letter" "$rc" "1"
 cd $REPO
 
 # ─────────────────────────────────────────────────────────────
+section "gh ship"
+# ─────────────────────────────────────────────────────────────
+# tests/fake-gh/gh plays GitHub: a bare repo stands in for the remote, and
+# files in $FAKE_GH set how slow GitHub is and which commits fail their checks.
+FAST=$TMP/fast-sleep && mkdir -p $FAST
+print -l '#!/bin/sh' 'exit 0' > $FAST/sleep && chmod +x $FAST/sleep
+
+# ship_repo NAME [DEFAULT]: fresh "GitHub" plus a clone on branch `change`
+# with one new commit; leaves you in the clone
+ship_repo() {
+  local default=${2:-main}
+  export FAKE_GH=$TMP/ship-$1
+  mkdir -p $FAKE_GH && : > $FAKE_GH/calls && print $default > $FAKE_GH/default
+  git init -q --bare -b $default $FAKE_GH/remote.git
+  git init -q -b $default $FAKE_GH/work && cd $FAKE_GH/work
+  git remote add origin $FAKE_GH/remote.git
+  print base > base.txt && git add base.txt && git commit -qm base && git push -q -u origin $default
+  git switch -q -c change && print change > change.txt && git add change.txt && git commit -qm change
+}
+ship()  { PATH=$REPO/tests/fake-gh:$FAST:$PATH $SHIP "$@" 2>&1 }
+calls() { grep -c -- "^$1" $FAKE_GH/calls }
+last()  { print -r -- "${1##*$'\n'}" }
+# what GitHub does when it squash-merges the PR (for the already-merged cases)
+github_merges() {
+  local w=$TMP/merge-$RANDOM
+  git clone -q $FAKE_GH/remote.git $w
+  (cd $w && git checkout -q main && git merge -q --squash origin/change && git commit -qm "change (#1)" && git push -q origin main) > /dev/null
+  print MERGED > $FAKE_GH/state && print main > $FAKE_GH/base && git rev-parse change > $FAKE_GH/seen
+}
+done_msg="gh ship: change is merged and main is up to date"
+
+ship_repo refuse
+out=$(git switch -q main && ship); rc=$?
+same "refuses on main" "$rc: $out" "1: gh ship: you're on main. Run it on the change's branch."
+out=$(git switch -q --detach change && ship); rc=$?
+same "refuses with no branch checked out" "$rc: $out" "1: gh ship: no branch checked out. Switch to the change's branch first."
+same "...and touches nothing on GitHub" "$(calls 'pr ') $(git --git-dir=$FAKE_GH/remote.git branch --list change)" "0 "
+
+ship_repo happy
+print 2 > $FAKE_GH/head_lag; print 2 > $FAKE_GH/check_lag; print 2 > $FAKE_GH/merge_lag
+out=$(ship); rc=$?
+same "ships a new change" "$rc: $(last $out)" "0: $done_msg"
+same "ends on main with the change pulled and the branch deleted" \
+  "$(git branch --show-current) $(cat change.txt) $(git branch --list change)" "main change "
+same "opens one PR and turns on auto-merge once" "$(calls 'pr create') $(calls 'pr merge')" "1 1"
+same "polls while GitHub catches up (head, checks, merge)" \
+  "$(calls 'pr view change --json headRefOid') $(calls 'pr view change --json statusCheckRollup') $(calls 'pr view change --json state,mergeable')" \
+  "3 3 3"
+same "watches the checks only after they're registered" \
+  "$(grep -n -E '^pr (checks|view change --json statusCheckRollup)' $FAKE_GH/calls | tail -1 | cut -d: -f2)" "pr checks change --watch --fail-fast"
+
+ship_repo fail
+git rev-parse HEAD > $FAKE_GH/failing
+out=$(ship); rc=$?
+same "a failed check exits non-zero and says so" "$rc: $(last $out)" \
+  "1: gh ship: a check failed. Fix it, commit, and run gh ship again."
+same "...and nothing merges" "$(git branch --show-current) $(cat $FAKE_GH/state) $(git --git-dir=$FAKE_GH/remote.git ls-tree --name-only main)" "change OPEN base.txt"
+print fixed > change.txt && git commit -qam fix
+out=$(ship); rc=$?
+same "after a fix, a rerun pushes it and finishes" "$rc: $(last $out)" "0: $done_msg"
+same "...reusing the PR and its auto-merge" "$(calls 'pr create') $(calls 'pr merge') $(cat change.txt)" "1 1 fixed"
+
+ship_repo merged
+git push -q -u origin change && github_merges && : > $FAKE_GH/calls
+out=$(ship); rc=$?
+same "already merged: goes straight to cleanup" "$rc: $(last $out)" "0: $done_msg"
+same "...without touching the PR" "$(calls 'pr create') $(calls 'pr merge') $(calls 'pr checks')" "0 0 0"
+same "...ending on main with the change" "$(git branch --show-current) $(cat change.txt)" "main change"
+
+ship_repo extra
+git push -q -u origin change && github_merges
+print more > more.txt && git add more.txt && git commit -qm more
+out=$(ship); rc=$?
+same "already merged but the branch has new commits: keeps the branch" \
+  "$rc $(git branch --show-current)" "1 change"
+
+ship_repo trunk trunk
+out=$(git switch -q trunk && ship); rc=$?
+same "reads the default branch from GitHub (refuses on trunk)" "$rc: $out" "1: gh ship: you're on trunk. Run it on the change's branch."
+out=$(git switch -q change && ship); rc=$?
+same "...and lands the change on it" "$rc $(git branch --show-current) $(cat change.txt)" "0 trunk change"
+
+ship_repo conflict
+print CONFLICTING > $FAKE_GH/mergeable; print 5 > $FAKE_GH/merge_lag
+out=$(ship); rc=$?
+same "a merge conflict stops the wait with instructions" "$rc: $(last $out)" \
+  "1: gh ship: the PR conflicts with main. Merge main into change, commit, and run gh ship again."
+
+ship_repo stuck
+print 1000 > $FAKE_GH/check_lag
+out=$(GH_SHIP_TIMEOUT=20 ship); rc=$?
+same "checks that never start: gives up with a message" "$rc: $(last $out)" \
+  "1: gh ship: GitHub still hasn't started any checks after 20s. Check the PR on GitHub, then run gh ship again."
+
+# Interrupt a real wait (real sleep). A script's background job can't get
+# SIGINT, so SIGTERM stands in for Ctrl-C: either way the script just dies mid-poll.
+ship_repo interrupt
+print 1000 > $FAKE_GH/head_lag
+(PATH=$REPO/tests/fake-gh:$PATH exec $SHIP >/dev/null 2>&1) &
+pid=$!
+sleep 3; kill $pid 2>/dev/null; wait $pid 2>/dev/null
+same "interrupted mid-wait: still on the branch, nothing merged" \
+  "$(git branch --show-current) $(cat $FAKE_GH/state) $(git --git-dir=$FAKE_GH/remote.git ls-tree --name-only main)" "change OPEN base.txt"
+print 0 > $FAKE_GH/head_lag && rm -f $FAKE_GH/head.left
+out=$(ship); rc=$?
+same "...and a rerun finishes" "$rc: $(last $out)" "0: $done_msg"
+cd $REPO
+
+if have gh; then
+  GH_HOME=$TMP/gh-home && mkdir -p $GH_HOME/.local/share/gh/extensions
+  ln -s ${SHIP:h} $GH_HOME/.local/share/gh/extensions/gh-ship   # what Stow creates
+  same "gh itself finds and runs the extension" \
+    "$(cd $TMP && env -u XDG_DATA_HOME HOME=$GH_HOME GH_CONFIG_DIR=$GH_HOME/.config/gh GH_TOKEN=unused gh ship --help 2>&1)" \
+    "usage: gh ship   (run on a change's branch after committing)"
+else
+  skip "gh finds the extension" "gh not installed"
+fi
+
+CS=$TMP/codespace && mkdir -p $CS
+for run in first second; do
+  out=$(cd $TMP && env -u XDG_DATA_HOME HOME=$CS CODESPACES=true bash $REPO/install.sh 2>&1); rc=$?
+  link=$CS/.local/share/gh/extensions/gh-ship
+  same "Codespaces install ($run run) links gh ship and stops" "$rc ${link:A}" "0 ${SHIP:h}"
+done
+
+# ─────────────────────────────────────────────────────────────
 section "Docs"
 # ─────────────────────────────────────────────────────────────
 sheet=$(<$REPO/CHEATSHEET.md)
@@ -275,11 +412,12 @@ funcs=( ${(f)"$(sed -n 's/^\([a-z_][a-z0-9_-]*\)() {.*/\1/p' $zfiles)"} )
 alias_names=( ${(f)"$(sed -n 's/^ *alias \([a-z0-9_-]*\)=.*/\1/p' $zfiles)"} )
 maps=( ${(f)"$(grep -oE 'map\(("[a-z]+"|\{[^}]*\}), "[^"]+"' $REPO/nvim/.config/nvim/lua/keymaps.lua | sed -E 's/.*, "([^"]+)"$/\1/')"} )
 
+extensions=( $REPO/gh/.local/share/gh/extensions/gh-*(N:t) )
 undocumented=()
-for name in $funcs $alias_names $maps; do
+for name in $funcs $alias_names $maps ${extensions/#gh-/gh }; do
   [[ $sheet == *"\`$name\`"* ]] || undocumented+=($name)
 done
-same "every function, alias and Neovim mapping is in CHEATSHEET.md" "${undocumented[*]:-}" ""
+same "every function, alias, gh extension and Neovim mapping is in CHEATSHEET.md" "${undocumented[*]:-}" ""
 
 stale=()
 for key in ${(u)${(f)"$(grep -oE '`<leader>[^`]+`' $REPO/CHEATSHEET.md | tr -d '`')"}}; do

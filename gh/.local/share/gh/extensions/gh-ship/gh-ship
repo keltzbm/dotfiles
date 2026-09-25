@@ -1,0 +1,101 @@
+#!/bin/sh
+# gh ship — finish a change on GitHub in one step.
+#
+# Run on a change's branch after committing: pushes it, opens a PR
+# (gh pr create --fill) unless one is open, turns on auto-merge (squash),
+# watches the PR's checks, waits for GitHub to merge, then switches to the
+# base branch, pulls, and deletes the change's branch.
+#
+# Safe to rerun at any point, and Ctrl-C during a wait changes nothing.
+# A failed check exits non-zero and nothing merges: fix, commit, rerun.
+#
+# Needs git 2.23+ and gh 2.29+. GH_SHIP_TIMEOUT (default 300) caps, in
+# seconds, each wait on GitHub itself; the checks can run as long as they need.
+
+set -u
+
+die() {
+  echo "gh ship: $*" >&2
+  exit 1
+}
+
+case "${1:-}" in
+  -h | --help)
+    echo "usage: gh ship   (run on a change's branch after committing)"
+    exit 0
+    ;;
+esac
+
+timeout=${GH_SHIP_TIMEOUT:-300}
+
+# wait_for WHAT CMD...: rerun CMD every 2s until it succeeds, or give up after $timeout
+wait_for() {
+  what=$1
+  shift
+  waited=0
+  until "$@"; do
+    [ "$waited" -lt "$timeout" ] || die "GitHub still hasn't $what after ${timeout}s. Check the PR on GitHub, then run gh ship again."
+    sleep 2
+    waited=$((waited + 2))
+  done
+}
+
+pr_head_is() { [ "$(gh pr view "$b" --json headRefOid -q .headRefOid)" = "$1" ]; }
+checks_registered() { [ "$(gh pr view "$b" --json statusCheckRollup -q '.statusCheckRollup | length')" -gt 0 ] 2>/dev/null; }
+pr_merged() {
+  s=$(gh pr view "$b" --json state,mergeable -q '.state + " " + .mergeable')
+  case $s in
+    MERGED*) return 0 ;;
+    CLOSED*) die "the PR was closed without merging." ;;
+    *CONFLICTING) die "the PR conflicts with $target. Merge $target into $b, commit, and run gh ship again." ;;
+  esac
+  return 1
+}
+
+# 1. Only on a change's branch
+git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repository."
+b=$(git branch --show-current)
+[ -n "$b" ] || die "no branch checked out. Switch to the change's branch first."
+default=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name) || die "couldn't look up this repo on GitHub (see above)."
+[ "$b" != "$default" ] || die "you're on $default. Run it on the change's branch."
+
+state=$(gh pr view "$b" --json state -q .state 2>/dev/null)
+
+if [ "$state" = MERGED ]; then
+  # 2. Already merged: only clean up if the branch has nothing the PR didn't
+  merged=$(gh pr view "$b" --json headRefOid -q .headRefOid) || die "couldn't read the PR (see above)."
+  here=$(git rev-parse HEAD)
+  if [ "$here" != "$merged" ] && ! git merge-base --is-ancestor "$here" "$merged" 2>/dev/null; then
+    die "$b's PR is already merged, but the branch has commits that weren't in it. Move them to a new branch (git switch -c <name>) and ship that."
+  fi
+else
+  # 3. Push, and open a PR unless one is open
+  git push -u origin "$b" || die "couldn't push $b (see above)."
+  if [ "$state" != OPEN ]; then
+    gh pr create --fill || die "couldn't open a PR (see above)."
+  fi
+
+  # 4. Auto-merge, unless it's already on
+  if [ -z "$(gh pr view "$b" --json autoMergeRequest -q '.autoMergeRequest // empty')" ]; then
+    gh pr merge "$b" --auto --squash || die "couldn't turn on auto-merge (see above). Is auto-merge allowed in the repo's settings?"
+  fi
+
+  # 5. Wait until GitHub has the pushed commit and its checks, then watch them
+  echo "gh ship: waiting for GitHub to start the checks"
+  wait_for "picked up the pushed commit" pr_head_is "$(git rev-parse HEAD)"
+  wait_for "started any checks" checks_registered
+
+  # 6. A failed check stops here; nothing merges
+  gh pr checks "$b" --watch --fail-fast || die "a check failed. Fix it, commit, and run gh ship again."
+fi
+
+# 7. Wait for the merge, then bring the base branch up to date
+target=$(gh pr view "$b" --json baseRefName -q .baseRefName) || die "couldn't read the PR (see above)."
+if [ "$state" != MERGED ]; then
+  echo "gh ship: checks passed; waiting for GitHub to merge"
+  wait_for "merged the PR" pr_merged
+fi
+git switch "$target" || die "couldn't switch to $target (see above). $b is untouched."
+git pull --ff-only || die "couldn't fast-forward $target (see above). $b is kept."
+git branch -D "$b" >/dev/null || die "couldn't delete $b (see above)."
+echo "gh ship: $b is merged and $target is up to date"

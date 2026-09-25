@@ -17,9 +17,10 @@ Each top-level folder is a Stow package laid out the way its files sit in `~`.
 | `alacritty` | Terminal                                | `~/.config/alacritty/`                |
 | `starship`  | Prompt                                  | `~/.config/starship.toml`             |
 | `git`       | Git config, global ignore file          | `~/.gitconfig`, `~/.gitignore_global` |
+| `gh`        | gh extensions: `gh ship`                | `~/.local/share/gh/extensions/`       |
 
-Also at the root: `install.sh` (setup), `tests/` (checks, below) and
-`.stowrc` (points Stow at `~`).
+Also at the root: `install.sh` (setup), `Brewfile` (every Homebrew tool it
+installs), `tests/` (checks, below) and `.stowrc` (points Stow at `~`).
 
 ## Install
 
@@ -30,10 +31,19 @@ cd ~/atelier/github/dotfiles
 ```
 
 `install.sh` is safe to rerun, and rerunning it is how a machine picks up
-changes. It pulls, installs Homebrew and the CLI tools, makes uv's Python
-3.14 the default, builds Alacritty from source where it's missing (not under
-WSL, where Alacritty runs on Windows), stows every package, and installs the
-tmux plugins. The full list is at the end of the cheat sheet.
+changes. It pulls, installs Homebrew and everything in the `Brewfile`, makes
+uv's Python 3.14 the default, builds Alacritty from source where it's missing
+(not under WSL, where Alacritty runs on Windows), stows every package, and
+installs the tmux plugins. The full list is at the end of the cheat sheet.
+To add a Homebrew tool, add a line to the `Brewfile` and rerun `install.sh`.
+
+### GitHub Codespaces
+
+In GitHub's Codespaces settings, turn on **Automatically install dotfiles**
+and pick this repo. Every new codespace then runs `install.sh`, which sees
+`CODESPACES=true`, links the gh extensions so `gh ship` works, and stops.
+Everything else stays off codespaces: the image already has git and a
+signed-in gh, and a full Homebrew install would slow down every codespace.
 
 ## Machine-specific files (not in the repo)
 
@@ -71,7 +81,12 @@ touches your real setup. It checks:
   starts in, stays in emacs keys, and keeps its cache out of the repo.
 - **Functions:** `gitzip`, `newrepo` and `venv` behave as the cheat sheet
   says, run against throwaway repos and folders.
-- **Docs:** every function, alias and Neovim mapping is in the cheat sheet,
+- **gh ship:** against a stand-in for GitHub (`tests/fake-gh/gh`, backed by a
+  real bare repo): a new PR, slow GitHub, a failed check and a rerun after the
+  fix, an already-merged PR, a non-`main` default branch, conflicts, checks
+  that never start, and an interrupted wait. Also that gh itself finds the
+  extension, and that the Codespaces install links it.
+- **Docs:** every function, alias, gh extension and Neovim mapping is in the cheat sheet,
   and every `<leader>` mapping the cheat sheet lists still exists.
 - **Neovim** (with `--nvim`): plugins install at the `lazy-lock.json`
   versions and a file opens without errors.
