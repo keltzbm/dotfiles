@@ -8,3 +8,8 @@ Desktop.ini
 *.swp
 *.swo
 .netrwhist
+
+# Local tool config: never committed
+CLAUDE.md
+CLAUDE.local.md
+.claude/
