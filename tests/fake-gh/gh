@@ -10,6 +10,8 @@
 #   merge_lag   polls before GitHub merges once checks have passed
 #   failing     commits whose checks fail, one per line
 #   mergeable   what the PR reports while waiting to merge (MERGEABLE)
+# A pushed head with no workflows in .github/workflows has no checks: turning
+# on auto-merge merges it at once, as GitHub does.
 # State it keeps: state (OPEN/MERGED/CLOSED), base, automerge, seen, passed.
 # Every call is appended to $FAKE_GH/calls.
 
@@ -72,6 +74,10 @@ case $cmd in
     ;;
   "pr merge")
     put automerge 1
+    if ! git --git-dir="$S/remote.git" ls-tree -r --name-only "$pushed" -- .github/workflows | grep -qE '\.ya?ml$'; then
+      put seen "$pushed"
+      merge_now
+    fi
     ;;
   "pr checks")
     h=$(head)

@@ -109,7 +109,9 @@ change is merged or something has clearly failed:
 2. Pushes the branch and opens a PR (`gh pr create --fill`) unless one is open.
 3. Turns on auto-merge (squash) unless it's already on.
 4. Waits for GitHub to show the pushed commit and start its checks, then
-   watches them (`gh pr checks --watch --fail-fast`).
+   watches them (`gh pr checks --watch --fail-fast`). A repo with no workflows
+   in `.github/workflows` has no checks: GitHub merges as soon as auto-merge is
+   on, and this step is skipped.
 5. If a check fails, stops with a non-zero exit and nothing merges. Fix,
    commit, and run `gh ship` again.
 6. Waits for GitHub to merge, then switches to the branch it merged into,
