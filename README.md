@@ -84,7 +84,8 @@ touches your real setup. It checks:
 - **gh ship:** against a stand-in for GitHub (`tests/fake-gh/gh`, backed by a
   real bare repo): a new PR, slow GitHub, a failed check and a rerun after the
   fix, an already-merged PR, a non-`main` default branch, conflicts, checks
-  that never start, and an interrupted wait. Also that gh itself finds the
+  that never start, an interrupted wait, a repo without CI or auto-merge,
+  and a run from a linked worktree. Also that gh itself finds the
   extension, and that the Codespaces install links it.
 - **Docs:** every function, alias, gh extension and Neovim mapping is in the cheat sheet,
   and every `<leader>` mapping the cheat sheet lists still exists.

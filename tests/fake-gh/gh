@@ -10,8 +10,10 @@
 #   merge_lag   polls before GitHub merges once checks have passed
 #   failing     commits whose checks fail, one per line
 #   mergeable   what the PR reports while waiting to merge (MERGEABLE)
+#   automerge_allowed  0 when the repo can't use auto-merge at all (a
+#               private repo on GitHub's free plan): --auto fails as GitHub does
 # A pushed head with no workflows in .github/workflows has no checks: turning
-# on auto-merge merges it at once, as GitHub does.
+# on auto-merge merges it at once. A plain `pr merge` merges at once.
 # State it keeps: state (OPEN/MERGED/CLOSED), base, automerge, seen, passed.
 # Every call is appended to $FAKE_GH/calls.
 
@@ -31,6 +33,7 @@ countdown() {
 
 branch=""
 json=""
+auto=0
 query=""
 cmd="$1 ${2:-}"
 shift 2
@@ -38,6 +41,7 @@ while [ $# -gt 0 ]; do
   case $1 in
     --json) json=$2; shift 2 ;;
     -q) query=$2; shift 2 ;;
+    --auto) auto=1; shift ;;
     -*) shift ;;
     *) branch=$1; shift ;;
   esac
@@ -73,6 +77,10 @@ case $cmd in
     echo "https://github.com/me/repo/pull/1"
     ;;
   "pr merge")
+    if [ "$auto" = 0 ]; then put seen "$pushed"; merge_now; exit 0; fi
+    if [ "$(get automerge_allowed 1)" != 1 ]; then
+      echo "GraphQL: Auto merge is not allowed for this repository (enablePullRequestAutoMerge)" >&2; exit 1
+    fi
     put automerge 1
     if ! git --git-dir="$S/remote.git" ls-tree -r --name-only "$pushed" -- .github/workflows | grep -qE '\.ya?ml$'; then
       put seen "$pushed"
