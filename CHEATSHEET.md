@@ -21,7 +21,7 @@ keybindings.
   their own `.venv`; use `uv sync`, `uv run <cmd>`, `uv add <pkg>` rather
   than pip. `newrepo` projects use a `src/` layout with ruff, mypy, pytest
   and pre-commit.
-- **Sharing a repo with Claude:** run `gitzip` inside it and upload the zip.
+- **Sharing a repo:** run `gitzip` inside it and upload the zip.
   Unzipped, it's a working checkout: `git log`, `git status` and
   `git diff` all work, including uncommitted changes.
 - Repos live in `~/atelier/github/` (personal) and `~/atelier/gitlab/`
