@@ -104,7 +104,7 @@ same "install.sh stows exactly the package folders" "${(j: :)${(@o)installed}}" 
 
 if have stow; then
   H=$TMP/stow-home && mkdir -p $H/.local/share/gh/extensions   # install.sh creates this first
-  check "all packages stow into an empty home" stow -d $REPO -t $H $packages
+  check "all packages stow into an empty home" stow -d $REPO -t $H --ignore='\.DS_Store' $packages
   for f in .zshenv .config/zsh/.zshrc .config/nvim/init.lua .tmux.conf .gitconfig \
            .gitignore_global .config/starship.toml .config/alacritty/alacritty.toml \
            .local/share/gh/extensions/gh-ship/gh-ship; do
@@ -115,7 +115,7 @@ if have stow; then
   [[ ! -L $H/.local && ! -L $H/.local/share/gh/extensions ]] \
     && pass "gh's extensions folder stays a real folder (only gh-ship is linked)" \
     || fail "gh's extensions folder stays a real folder (only gh-ship is linked)" "$(ls -la $H/.local $H/.local/share/gh 2>&1)"
-  stow -d $REPO -t $H -D $packages
+  stow -d $REPO -t $H --ignore='\.DS_Store' -D $packages
 
   # .stowrc: plain `stow <pkg>` from the repo should target $HOME
   H2=$TMP/stowrc-home && mkdir -p $H2
@@ -285,8 +285,9 @@ section "gh ship"
 FAST=$TMP/fast-sleep && mkdir -p $FAST
 print -l '#!/bin/sh' 'exit 0' > $FAST/sleep && chmod +x $FAST/sleep
 
-# ship_repo NAME [DEFAULT]: fresh "GitHub" plus a clone on branch `change`
-# with one new commit; leaves you in the clone
+# ship_repo NAME [DEFAULT] [no-ci]: fresh "GitHub" plus a clone on branch
+# `change` with one new commit, and a CI workflow unless no-ci; leaves you in
+# the clone
 ship_repo() {
   local default=${2:-main}
   export FAKE_GH=$TMP/ship-$1
@@ -294,7 +295,9 @@ ship_repo() {
   git init -q --bare -b $default $FAKE_GH/remote.git
   git init -q -b $default $FAKE_GH/work && cd $FAKE_GH/work
   git remote add origin $FAKE_GH/remote.git
-  print base > base.txt && git add base.txt && git commit -qm base && git push -q -u origin $default
+  print base > base.txt
+  if [[ ${3:-} != no-ci ]]; then mkdir -p .github/workflows && print 'on: pull_request' > .github/workflows/ci.yml; fi
+  git add -A && git commit -qm base && git push -q -u origin $default
   git switch -q -c change && print change > change.txt && git add change.txt && git commit -qm change
 }
 ship()  { PATH=$REPO/tests/fake-gh:$FAST:$PATH $SHIP "$@" 2>&1 }
@@ -334,7 +337,7 @@ git rev-parse HEAD > $FAKE_GH/failing
 out=$(ship); rc=$?
 same "a failed check exits non-zero and says so" "$rc: $(last $out)" \
   "1: gh ship: a check failed. Fix it, commit, and run gh ship again."
-same "...and nothing merges" "$(git branch --show-current) $(cat $FAKE_GH/state) $(git --git-dir=$FAKE_GH/remote.git ls-tree --name-only main)" "change OPEN base.txt"
+same "...and nothing merges" "$(git branch --show-current) $(cat $FAKE_GH/state) $(git --git-dir=$FAKE_GH/remote.git ls-tree --name-only main -- base.txt change.txt)" "change OPEN base.txt"
 print fixed > change.txt && git commit -qam fix
 out=$(ship); rc=$?
 same "after a fix, a rerun pushes it and finishes" "$rc: $(last $out)" "0: $done_msg"
@@ -380,10 +383,16 @@ print 1000 > $FAKE_GH/head_lag
 pid=$!
 sleep 3; kill $pid 2>/dev/null; wait $pid 2>/dev/null
 same "interrupted mid-wait: still on the branch, nothing merged" \
-  "$(git branch --show-current) $(cat $FAKE_GH/state) $(git --git-dir=$FAKE_GH/remote.git ls-tree --name-only main)" "change OPEN base.txt"
+  "$(git branch --show-current) $(cat $FAKE_GH/state) $(git --git-dir=$FAKE_GH/remote.git ls-tree --name-only main -- base.txt change.txt)" "change OPEN base.txt"
 print 0 > $FAKE_GH/head_lag && rm -f $FAKE_GH/head.left
 out=$(ship); rc=$?
 same "...and a rerun finishes" "$rc: $(last $out)" "0: $done_msg"
+ship_repo no-ci main no-ci
+out=$(ship); rc=$?
+same "no workflows: GitHub merges at once, so it doesn't wait for checks" "$rc: $(last $out)" "0: $done_msg"
+same "...says so, and never asks about checks" \
+  "$(print -r -- $out | grep -c 'no checks to wait for') $(calls 'pr checks') $(calls 'pr view change --json statusCheckRollup')" "1 0 0"
+same "...and ends on main with the change" "$(git branch --show-current) $(cat change.txt)" "main change"
 cd $REPO
 
 if have gh; then
