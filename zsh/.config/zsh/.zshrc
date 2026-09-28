@@ -75,6 +75,9 @@ bindkey -e                  # emacs keys at the prompt (EDITOR=nvim would pick v
 # ─────────────────────────────────────────────────────────────
 # Homebrew tools install their completions here (gh, uv, eza, rg, ...)
 [[ -n "$HOMEBREW_PREFIX" ]] && fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
+# ...and Typer apps (riffle) install theirs in ~/.zfunc. Their installer adds
+# this line to ~/.zshrc, which zsh never reads here: ZDOTDIR points elsewhere.
+[[ -d ~/.zfunc ]] && fpath=(~/.zfunc $fpath)
 
 # Cache lives outside $ZDOTDIR so it never lands in the repo; -i skips any
 # directory compaudit calls insecure instead of stopping startup to ask

@@ -104,7 +104,7 @@ same "install.sh stows exactly the package folders" "${(j: :)${(@o)installed}}" 
 
 if have stow; then
   H=$TMP/stow-home && mkdir -p $H/.local/share/gh/extensions   # install.sh creates this first
-  check "all packages stow into an empty home" stow -d $REPO -t $H --ignore='\.DS_Store' $packages
+  check "all packages stow into an empty home" stow -d $REPO -t $H --ignore='\.DS_Store' --ignore='\.zcompdump.*' $packages
   for f in .zshenv .config/zsh/.zshrc .config/nvim/init.lua .tmux.conf .gitconfig \
            .gitignore_global .config/starship.toml .config/alacritty/alacritty.toml \
            .local/share/gh/extensions/gh-ship/gh-ship; do
@@ -115,13 +115,21 @@ if have stow; then
   [[ ! -L $H/.local && ! -L $H/.local/share/gh/extensions ]] \
     && pass "gh's extensions folder stays a real folder (only gh-ship is linked)" \
     || fail "gh's extensions folder stays a real folder (only gh-ship is linked)" "$(ls -la $H/.local $H/.local/share/gh 2>&1)"
-  stow -d $REPO -t $H --ignore='\.DS_Store' -D $packages
+  stow -d $REPO -t $H --ignore='\.DS_Store' --ignore='\.zcompdump.*' -D $packages
 
   # .stowrc: plain `stow <pkg>` from the repo should target $HOME
   H2=$TMP/stowrc-home && mkdir -p $H2
   out=$(cd $REPO && HOME=$H2 stow -n -v tmux 2>&1)
   if [[ $out == *"LINK: .tmux.conf"* && $out != *ERROR* ]]; then pass ".stowrc targets ~"
   else fail ".stowrc targets ~" "$out"; fi
+
+  # A completion cache zsh left in a package folder (through a folded link)
+  # must not stop stowing, even where home has its own copy
+  SS=$TMP/stow-stray && mkdir -p $SS/home/.config/zsh && cp -R $REPO/zsh $REPO/.stowrc $SS/
+  print dump > $SS/zsh/.config/zsh/.zcompdump && print dump > $SS/home/.config/zsh/.zcompdump
+  out=$(cd $SS && HOME=$SS/home stow -n -v zsh 2>&1)
+  if [[ $out != *ERROR* && $out != *conflict* && $out != *zcompdump* ]]; then pass ".stowrc skips a stray .zcompdump"
+  else fail ".stowrc skips a stray .zcompdump" "$out"; fi
 else
   skip "stow checks" "stow not installed"
 fi
@@ -326,6 +334,7 @@ same "ships a new change" "$rc: $(last $out)" "0: $done_msg"
 same "ends on main with the change pulled and the branch deleted" \
   "$(git branch --show-current) $(cat change.txt) $(git branch --list change)" "main change "
 same "opens one PR and turns on auto-merge once" "$(calls 'pr create') $(calls 'pr merge')" "1 1"
+same "...and deletes the branch on GitHub" "$(git --git-dir=$FAKE_GH/remote.git branch --list change)" ""
 same "polls while GitHub catches up (head, checks, merge)" \
   "$(calls 'pr view change --json headRefOid') $(calls 'pr view change --json statusCheckRollup') $(calls 'pr view change --json state,mergeable')" \
   "3 3 3"
@@ -393,6 +402,30 @@ same "no workflows: GitHub merges at once, so it doesn't wait for checks" "$rc: 
 same "...says so, and never asks about checks" \
   "$(print -r -- $out | grep -c 'no checks to wait for') $(calls 'pr checks') $(calls 'pr view change --json statusCheckRollup')" "1 0 0"
 same "...and ends on main with the change" "$(git branch --show-current) $(cat change.txt)" "main change"
+
+ship_repo private main no-ci
+print 0 > $FAKE_GH/automerge_allowed
+out=$(ship); rc=$?
+same "no workflows, and no auto-merge on the repo (private, free plan): merges directly" "$rc: $(last $out)" "0: $done_msg"
+same "...never asking for auto-merge, and deletes the branch on GitHub" \
+  "$(grep -c -- '--auto' $FAKE_GH/calls) $(git --git-dir=$FAKE_GH/remote.git branch --list change)" "0 "
+
+ship_repo private-ci
+print 0 > $FAKE_GH/automerge_allowed
+out=$(ship); rc=$?
+same "with CI but no auto-merge on the repo: stops and says why" "$rc: $(last $out)" \
+  "1: gh ship: couldn't turn on auto-merge (see above). Is auto-merge allowed in the repo's settings?"
+
+ship_repo worktree
+git switch -q main && git worktree add -q $FAKE_GH/wt change && cd $FAKE_GH/wt
+out=$(ship); rc=$?
+lines=( ${(f)out} )
+same "in a linked worktree: merges and updates main in the main checkout" "$rc: ${lines[-2]}" \
+  "0: gh ship: change is merged and main is up to date in ${FAKE_GH:A}/work"
+same "...says how to finish" "${lines[-1]}" \
+  "gh ship: to finish: cd ${FAKE_GH:A}/work && git worktree remove ${FAKE_GH:A}/wt && git branch -D change"
+same "...with the change pulled there, and this worktree left alone" \
+  "$(cat $FAKE_GH/work/change.txt) $(git -C $FAKE_GH/work branch --show-current) $(git branch --show-current)" "change main change"
 cd $REPO
 
 if have gh; then

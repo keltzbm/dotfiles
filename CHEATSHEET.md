@@ -14,8 +14,10 @@ keybindings.
   (scaffold a Python project) and `venv` (activate the nearest `.venv`).
 - **Changes land through `gh ship`.** Work happens one branch per change;
   after committing on the branch, `gh ship` pushes it, opens the PR, turns on
-  auto-merge, waits for CI and the merge, then leaves you on an up-to-date
-  `main` with the branch deleted. It's safe to rerun, and exits non-zero if a
+  auto-merge, waits for CI and the merge (a repo without CI merges at once),
+  then leaves you on an up-to-date `main` with the branch deleted, here and on
+  GitHub. From a linked worktree it updates `main` in the main checkout and
+  prints how to remove the worktree. It's safe to rerun, and exits non-zero if a
   check fails (fix, commit, run it again). It also works in Codespaces.
 - **Python comes from uv.** `python`/`python3` are uv's 3.14. Projects keep
   their own `.venv`; use `uv sync`, `uv run <cmd>`, `uv add <pkg>` rather
@@ -107,15 +109,20 @@ change is merged or something has clearly failed:
 1. Refuses on the default branch (read from GitHub, usually `main`) or with
    no branch checked out.
 2. Pushes the branch and opens a PR (`gh pr create --fill`) unless one is open.
-3. Turns on auto-merge (squash) unless it's already on.
+3. With workflows in `.github/workflows`: turns on auto-merge (squash) unless
+   it's already on. Without: merges now (squash), since there's nothing to
+   wait for, and GitHub won't auto-merge a PR it could merge already, nor at
+   all on a private repo on the free plan.
 4. Waits for GitHub to show the pushed commit and start its checks, then
-   watches them (`gh pr checks --watch --fail-fast`). A repo with no workflows
-   in `.github/workflows` has no checks: GitHub merges as soon as auto-merge is
-   on, and this step is skipped.
+   watches them (`gh pr checks --watch --fail-fast`). Skipped without
+   workflows.
 5. If a check fails, stops with a non-zero exit and nothing merges. Fix,
    commit, and run `gh ship` again.
-6. Waits for GitHub to merge, then switches to the branch it merged into,
-   pulls, and deletes the local branch.
+6. Waits for GitHub to merge, deletes the branch on GitHub if it's still
+   there, then switches to the branch it merged into, pulls, and deletes the
+   local branch. In a linked worktree, which can't switch to a branch the main
+   checkout has, it pulls in the main checkout instead and prints the command
+   that removes the worktree and the branch.
 
 - Safe to rerun at any point; Ctrl-C during a wait changes nothing.
 - If the PR is already merged it goes straight to step 6, unless the branch
