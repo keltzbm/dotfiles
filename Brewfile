@@ -27,6 +27,7 @@ brew "shellcheck"
 # Languages
 brew "uv"
 brew "deno"
+brew "node"
 
 # macOS only
 cask "font-jetbrains-mono-nerd-font" if OS.mac?

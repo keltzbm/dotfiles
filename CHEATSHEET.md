@@ -30,7 +30,7 @@ keybindings.
   (work); git picks the identity by folder.
 - `ls` is eza, `vi`/`vim` open Neovim, and `EDITOR=nvim`.
 - Installed everywhere (the `Brewfile`): `rg`, `fd`, `bat`, `fzf`, `zoxide`,
-  `eza`, `gh`, `uv`, `deno`, `duckdb`, `shellcheck`, `stow`, `git-lfs`, `stylua`.
+  `eza`, `gh`, `uv`, `deno`, `node`, `duckdb`, `shellcheck`, `stow`, `git-lfs`, `stylua`.
 
 ## Shell commands
 
@@ -155,22 +155,23 @@ The `eza` aliases only exist when eza is installed.
 
 Installed by `install.sh` on every machine (Homebrew).
 
-| Tool       | Command / keys                   | Use                                        |
-|------------|----------------------------------|--------------------------------------------|
-| ripgrep    | `rg <pattern>`                   | Search file contents (respects .gitignore) |
-| fd         | `fd <name>`                      | Find files by name                         |
-| bat        | `bat <file>`                     | `cat` with syntax highlighting             |
-| fzf        | `Ctrl-R` / `Ctrl-T` / `Alt-C`    | Fuzzy history search / insert a file path / cd into a folder |
-| zoxide     | `z <part of path>` / `zi`        | Jump to a visited folder / pick one interactively |
-| eza        | via the aliases above            | `ls` replacement                           |
-| gh         | `gh pr create`, `gh repo view`…  | GitHub CLI                                 |
-| uv         | `uv sync`, `uv run`, `uv add`    | Python versions, venvs, dependencies       |
-| deno       | `deno`                           | JS/TS runtime (builds peek.nvim)           |
-| duckdb     | `duckdb [file.db]`               | SQL on local files (CSV, Parquet, JSON)    |
-| shellcheck | `shellcheck <script>`            | Lint shell scripts (the tests use it)      |
-| git-lfs    | automatic                        | Large files in repos that use LFS          |
-| stylua     | automatic                        | Lua formatter (Neovim formats on save)     |
-| stow       | `stow -R <package>`              | Re-link a dotfiles package                 |
+| Tool       | Command / keys                      | Use                                                          |
+|------------|-------------------------------------|--------------------------------------------------------------|
+| ripgrep    | `rg <pattern>`                      | Search file contents (respects .gitignore)                   |
+| fd         | `fd <name>`                         | Find files by name                                           |
+| bat        | `bat <file>`                        | `cat` with syntax highlighting                               |
+| fzf        | `Ctrl-R` / `Ctrl-T` / `Alt-C`       | Fuzzy history search / insert a file path / cd into a folder |
+| zoxide     | `z <part of path>` / `zi`           | Jump to a visited folder / pick one interactively            |
+| eza        | via the aliases above               | `ls` replacement                                             |
+| gh         | `gh pr create`, `gh repo view`, ... | GitHub CLI                                                   |
+| uv         | `uv sync`, `uv run`, `uv add`       | Python versions, venvs, dependencies                         |
+| deno       | `deno`                              | JS/TS runtime (builds peek.nvim)                             |
+| node       | automatic                           | npm for Mason (bash/TS language servers)                     | 
+| duckdb     | `duckdb [file.db]`                  | SQL on local files (CSV, Parquet, JSON)                      |
+| shellcheck | `shellcheck <script>`               | Lint shell scripts (the tests use it)                        |
+| git-lfs    | automatic                           | Large files in repos that use LFS                            |
+| stylua     | automatic                           | Lua formatter (Neovim formats on save)                       |
+| stow       | `stow -R <package>`                 | Re-link a dotfiles package                                   |
 
 ## Git
 
