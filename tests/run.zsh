@@ -58,9 +58,10 @@ done
 
 SHIP=$REPO/gh/.local/share/gh/extensions/gh-ship/gh-ship
 check "bash -n install.sh" bash -n $REPO/install.sh
+check "bash -n update.sh" bash -n $REPO/update.sh
 check "sh -n gh-ship" sh -n $SHIP
 if have shellcheck; then
-  for f in $REPO/install.sh $SHIP $REPO/tests/fake-gh/gh; do
+  for f in $REPO/install.sh $REPO/update.sh $SHIP $REPO/tests/fake-gh/gh; do
     check "shellcheck ${f#$REPO/}" shellcheck $f
   done
 else
@@ -147,8 +148,8 @@ err=$(run_zsh 'true' 2>&1 >/dev/null)
 same "interactive startup prints no errors" "$err" ""
 same "startup keeps the starting folder (WSL cd ~ is scoped)" "$(run_zsh 'print -r -- $PWD' 2>/dev/null)" "$ZH/project/sub"
 same "emacs keys even with EDITOR=nvim inherited" "$(run_zsh 'bindkey -lL main' 2>/dev/null)" "bindkey -A emacs main"
-same "functions are loaded" "$(run_zsh 'whence -w gitzip newrepo venv' 2>/dev/null)" \
-  $'gitzip: function\nnewrepo: function\nvenv: function'
+same "functions are loaded" "$(run_zsh 'whence -w gitzip newrepo venv dotup' 2>/dev/null)" \
+  $'gitzip: function\nnewrepo: function\nvenv: function\ndotup: function'
 same "EDITOR/VISUAL come from .zshenv" "$(cd $ZH && env -u EDITOR -u VISUAL HOME=$ZH zsh -c 'print $EDITOR $VISUAL' 2>/dev/null)" "nvim nvim"
 [[ -e $ZH/.cache/zsh/zcompdump ]] && pass "completion cache goes to ~/.cache/zsh" \
   || fail "completion cache goes to ~/.cache/zsh" "$(ls -la $ZH/.cache/zsh 2>&1)"
@@ -284,6 +285,79 @@ same "refuses an existing folder" "$rc" "1"
 out=$(newrepo 1bad --no-sync 2>&1); rc=$?
 same "rejects names that don't start with a letter" "$rc" "1"
 cd $REPO
+
+# ─────────────────────────────────────────────────────────────
+section "update.sh"
+# ─────────────────────────────────────────────────────────────
+# Stand-ins for the tools on PATH: each logs its name and arguments, and
+# exits with the code in $UP/fail-<tool>-<first argument> if that file exists.
+UP=$TMP/update && mkdir -p $UP/bin $UP/home/.tmux/plugins/tpm/bin
+for tool in brew uv nvim rustup launchctl systemctl; do
+  print -r -- '#!/bin/sh
+echo "'$tool' $*" >> '$UP'/calls
+[ -f "'$UP'/fail-'$tool'-$1" ] && exit "$(cat "'$UP'/fail-'$tool'-$1")"
+exit 0' > $UP/bin/$tool
+  chmod +x $UP/bin/$tool
+done
+print -r -- '#!/bin/sh
+echo "tpm $*" >> '$UP'/calls' > $UP/home/.tmux/plugins/tpm/bin/update_plugins
+chmod +x $UP/home/.tmux/plugins/tpm/bin/update_plugins
+# update [VAR=value...] -- [args]: run update.sh with only the stand-ins on PATH
+update() {
+  local -a envs
+  while [[ $# -gt 0 && $1 != -- ]]; do envs+=($1); shift; done
+  [[ ${1:-} == -- ]] && shift
+  env -u XDG_STATE_HOME -u XDG_CONFIG_HOME HOME=$UP/home PATH=$UP/bin:/usr/bin:/bin $envs bash $REPO/update.sh "$@" 2>&1
+}
+UPLOG=$UP/home/.local/state/dotfiles
+
+: > $UP/calls
+out=$(update); rc=$?
+same "runs every step and says so" "$rc: ${out##*$'\n'}" "0: Updated."
+same "steps run in order" "$(cut -d' ' -f1,2 $UP/calls | tr '\n' ',')" \
+  "brew update,brew upgrade,brew bundle,brew cleanup,uv python,nvim --headless,tpm all,rustup update,"
+same "brew bundle reads this repo's Brewfile" "$(grep '^brew bundle' $UP/calls)" "brew bundle --file=$REPO/Brewfile"
+same "every step is logged with a UTC time" \
+  "$(sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z //' $UPLOG/update.log | tr '\n' ',')" \
+  "brew update ok,brew upgrade ok,brew bundle ok,brew cleanup ok,uv python ok,nvim plugins ok,tmux plugins ok,rustup ok,"
+
+: > $UP/calls; print 3 > $UP/fail-brew-upgrade
+out=$(update); rc=$?
+same "a failing step exits non-zero and is named" "$rc: ${out##*$'\n'}" "1: Failed: brew upgrade. The log is $UPLOG/update.log."
+same "...and the steps after it still run" "$(tail -1 $UP/calls)" "rustup update"
+same "...and it is left for the next shell to report" "$(<$UPLOG/update.failed)" "brew upgrade"
+mkdir -p $ZH/.local/state/dotfiles && print 'brew upgrade' > $ZH/.local/state/dotfiles/update.failed
+notice=$(cd $ZH/project/sub && env -u XDG_STATE_HOME HOME=$ZH zsh -i -c true 2>&1)
+rm -rf $ZH/.local/state/dotfiles
+same "the next shell says which step failed" "$notice" "dotfiles: the last update failed at: brew upgrade (dotup to retry)"
+rm $UP/fail-brew-upgrade
+out=$(update); rc=$?
+check "a passing run clears the failure" test $rc -eq 0 -a ! -e $UPLOG/update.failed
+
+: > $UP/calls
+out=$(update DOTFILES_OS=Darwin -- --schedule); rc=$?
+plist=$UP/home/Library/LaunchAgents/dotfiles.update.plist
+same "--schedule on macOS writes a launchd agent for Sunday 03:30" \
+  "$rc $(grep -c "<string>$REPO/update.sh</string>" $plist) $(grep -c '<key>Weekday</key><integer>0</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>30</integer>' $plist)" "0 1 1"
+same "...and loads it" "$(grep -c '^launchctl bootstrap' $UP/calls)" "1"
+if have plutil; then check "...and the plist is valid" plutil -lint $plist; else skip "the plist is valid" "plutil is macOS only"; fi
+update DOTFILES_OS=Darwin -- --unschedule > /dev/null
+check "--unschedule on macOS removes it" test ! -e $plist
+
+: > $UP/calls
+out=$(update DOTFILES_OS=Linux -- --schedule); rc=$?
+units=$UP/home/.config/systemd/user
+same "--schedule on Linux writes a weekly user timer" \
+  "$rc $(grep -c 'OnCalendar=Sun 03:30' $units/dotfiles-update.timer) $(grep -c "ExecStart=/bin/bash $REPO/update.sh" $units/dotfiles-update.service)" "0 1 1"
+same "...and enables it" "$(grep -c '^systemctl --user enable --now dotfiles-update.timer' $UP/calls)" "1"
+update DOTFILES_OS=Linux -- --unschedule > /dev/null
+check "--unschedule on Linux removes it" test ! -e $units/dotfiles-update.timer -a ! -e $units/dotfiles-update.service
+
+out=$(update -- --nonsense); rc=$?
+same "an unknown option is refused" "$rc: $out" "2: update.sh: unknown option --nonsense (see --help)"
+
+source $REPO/zsh/.config/zsh/functions/dotup.zsh
+same "dotup finds update.sh through its own path" "$_dotup_repo" "$REPO"
 
 # ─────────────────────────────────────────────────────────────
 section "gh ship"
