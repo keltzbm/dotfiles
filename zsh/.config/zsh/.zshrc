@@ -113,6 +113,14 @@ source "${ZDOTDIR:-$HOME/.config/zsh}/functions/venv.zsh"
 # Zip a repo for sharing: working tree + .git by default (--no-git, --head)
 source "${ZDOTDIR:-$HOME/.config/zsh}/functions/gitzip.zsh"
 
+# Upgrade what the dotfiles installed (update.sh); --schedule makes it weekly
+source "${ZDOTDIR:-$HOME/.config/zsh}/functions/dotup.zsh"
+
+# A scheduled update that failed says so here, once a shell, until a run passes
+if [[ -o interactive && -s ${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/update.failed ]]; then
+  print -r -- "dotfiles: the last update failed at: $(<${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/update.failed) (dotup to retry)"
+fi
+
 # ─────────────────────────────────────────────────────────────
 # Integrations (after compinit)
 # ─────────────────────────────────────────────────────────────

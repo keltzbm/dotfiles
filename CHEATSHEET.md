@@ -9,9 +9,10 @@ keybindings.
 
 ## Summary for assistants
 
-- Shell is **zsh**. Three custom commands exist on every machine:
+- Shell is **zsh**. Four custom commands exist on every machine:
   `gitzip` (zip a repo, with its git history, for sharing), `newrepo`
-  (scaffold a Python project) and `venv` (activate the nearest `.venv`).
+  (scaffold a Python project), `venv` (activate the nearest `.venv`) and
+  `dotup` (upgrade what these dotfiles installed).
 - **Changes land through `gh ship`.** Work happens one branch per change;
   after committing on the branch, `gh ship` pushes it, opens the PR, turns on
   auto-merge, waits for CI and the merge (a repo without CI merges at once),
@@ -96,6 +97,25 @@ newrepo <name> [-d "description"] [-p 3.13] [--cli] [--gh] [--public] [--no-sync
 
 No `.venv` found → error; if there's a `pyproject.toml`, it suggests
 `uv sync`.
+
+### dotup — upgrade what the dotfiles installed
+
+```bash
+dotup [--schedule | --unschedule]
+```
+
+| Command              | Does                                                        |
+|----------------------|-------------------------------------------------------------|
+| `dotup`              | Runs `update.sh` now: Homebrew (update, upgrade, the Brewfile, cleanup), uv's default Python, Neovim's plugins, tmux's plugins, rustup where it's installed |
+| `dotup --schedule`   | Runs it every Sunday at 03:30 (launchd on macOS, a systemd user timer on Linux) |
+| `dotup --unschedule` | Stops the weekly run                                        |
+
+- A step that fails is logged and the rest still run; the next shell prints
+  one line naming it, until a run passes.
+- The log is `~/.local/state/dotfiles/update.log`, a line a step with its UTC time.
+- Nothing needs `sudo`: apt packages stay manual.
+- Neovim's update rewrites `lazy-lock.json` here; commit it when the other
+  machines should follow.
 
 ### gh ship — land a change on the default branch
 
@@ -310,3 +330,9 @@ Windows), stow every package into `~`, then install TPM and the tmux plugins.
 
 In a GitHub Codespace it only links the gh extensions (`gh ship`) and stops:
 the codespace image already has git and a signed-in gh.
+
+## update.sh
+
+What `dotup` runs, and what the weekly job runs. `install.sh` installs and
+never upgrades (`brew bundle --no-upgrade`); this is the other half.
+`./update.sh --help` prints its steps.

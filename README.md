@@ -19,7 +19,7 @@ Each top-level folder is a Stow package laid out the way its files sit in `~`.
 | `git`       | Git config, global ignore file          | `~/.gitconfig`, `~/.gitignore_global` |
 | `gh`        | gh extensions: `gh ship`                | `~/.local/share/gh/extensions/`       |
 
-Also at the root: `install.sh` (setup), `Brewfile` (every Homebrew tool it
+Also at the root: `install.sh` (setup), `update.sh` (upgrades), `Brewfile` (every Homebrew tool it
 installs), `tests/` (checks, below) and `.stowrc` (points Stow at `~`).
 
 ## Install
@@ -63,6 +63,10 @@ Each holds a `[user]` block (name, email). Repos anywhere else use the
   whole folders where it can; otherwise `stow -R <package>`.
 - New package: create `<tool>/<path as it sits in ~>`, then add the folder
   to the `for pkg in …` list in `install.sh`. A test checks the two match.
+- Upgrades: `dotup` upgrades Homebrew's packages, uv's Python and the Neovim
+  and tmux plugins; `dotup --schedule` does it every Sunday at 03:30 and a
+  failure shows up as one line at the next shell start. `install.sh` itself
+  never upgrades anything.
 
 ## Tests
 
@@ -81,6 +85,10 @@ touches your real setup. It checks:
   starts in, stays in emacs keys, and keeps its cache out of the repo.
 - **Functions:** `gitzip`, `newrepo` and `venv` behave as the cheat sheet
   says, run against throwaway repos and folders.
+- **update.sh:** with stand-ins for brew, uv, nvim and rustup on the `PATH`:
+  the steps run in order and are logged, a failing step is named and the
+  rest still run, the next shell reports it, and `--schedule` writes and
+  removes the launchd agent and the systemd timer.
 - **gh ship:** against a stand-in for GitHub (`tests/fake-gh/gh`, backed by a
   real bare repo): a new PR, slow GitHub, a failed check and a rerun after the
   fix, an already-merged PR, a non-`main` default branch, conflicts, checks
