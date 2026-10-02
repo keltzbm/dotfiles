@@ -148,8 +148,8 @@ err=$(run_zsh 'true' 2>&1 >/dev/null)
 same "interactive startup prints no errors" "$err" ""
 same "startup keeps the starting folder (WSL cd ~ is scoped)" "$(run_zsh 'print -r -- $PWD' 2>/dev/null)" "$ZH/project/sub"
 same "emacs keys even with EDITOR=nvim inherited" "$(run_zsh 'bindkey -lL main' 2>/dev/null)" "bindkey -A emacs main"
-same "functions are loaded" "$(run_zsh 'whence -w gitzip newrepo venv dotup' 2>/dev/null)" \
-  $'gitzip: function\nnewrepo: function\nvenv: function\ndotup: function'
+same "functions are loaded" "$(run_zsh 'whence -w gitzip newrepo venv dotup termsize' 2>/dev/null)" \
+  $'gitzip: function\nnewrepo: function\nvenv: function\ndotup: function\ntermsize: function'
 same "EDITOR/VISUAL come from .zshenv" "$(cd $ZH && env -u EDITOR -u VISUAL HOME=$ZH zsh -c 'print $EDITOR $VISUAL' 2>/dev/null)" "nvim nvim"
 [[ -e $ZH/.cache/zsh/zcompdump ]] && pass "completion cache goes to ~/.cache/zsh" \
   || fail "completion cache goes to ~/.cache/zsh" "$(ls -la $ZH/.cache/zsh 2>&1)"
@@ -285,6 +285,82 @@ same "refuses an existing folder" "$rc" "1"
 out=$(newrepo 1bad --no-sync 2>&1); rc=$?
 same "rejects names that don't start with a letter" "$rc" "1"
 cd $REPO
+
+# ─────────────────────────────────────────────────────────────
+section "termsize"
+# ─────────────────────────────────────────────────────────────
+# Stand-ins on PATH: osascript answers with the display in $TS/display, tmux
+# with the client's size in $TS/client.
+TS=$TMP/termsize && mkdir -p $TS/bin $TS/home
+print -r -- '#!/bin/sh
+cat "'$TS'/display"' > $TS/bin/osascript
+print -r -- '#!/bin/sh
+cat "'$TS'/client"' > $TS/bin/tmux
+chmod +x $TS/bin/osascript $TS/bin/tmux
+TSFILE=$REPO/zsh/.config/zsh/functions/termsize.zsh
+TSDIR=$TS/home/.local/state/alacritty
+# ts [VAR=value...] -- CODE: run CODE in a bare zsh with termsize loaded, a 180 by 50 window
+ts() {
+  local -a envs
+  while [[ $# -gt 0 && $1 != -- ]]; do envs+=($1); shift; done
+  shift
+  env -u TMUX -u SSH_CONNECTION HOME=$TS/home PATH=$TS/bin:/usr/bin:/bin $envs zsh -f -c "source $TSFILE; COLUMNS=180 LINES=50; $1" 2>&1
+}
+toml() { print -r -- "# Written by termsize (dotfiles): the size last used on the display $1."$'\n'"[window.dimensions]"$'\n'"columns = $2"$'\n'"lines = $3" }
+
+print 5120x2160 > $TS/display
+out=$(ts -- 'termsize save && termsize')
+same "save keeps the window's size under the display in front" "$(<$TSDIR/size-5120x2160)" "180 50"
+same "...and writes it where alacritty.toml imports it" "$(<$TSDIR/size.toml)" "$(toml 5120x2160 180 50)"
+same "...and termsize says so" "$out" "display 5120x2160: 180 by 50 saved; this window is 180 by 50"
+
+print 1512x982 > $TS/display
+ts -- 'termsize apply' > /dev/null
+same "a display with nothing saved gets 80 by 24" "$(<$TSDIR/size.toml)" "$(toml 1512x982 80 24)"
+same "...and the other display's size is kept" "$(<$TSDIR/size-5120x2160)" "180 50"
+same "...and termsize says nothing is saved" "$(ts -- 'termsize')" "display 1512x982: nothing saved (80 by 24); this window is 180 by 50"
+
+print 'execution error' > $TS/display
+same "a display that can't be read is called default" "$(ts -- 'termsize display')" "default"
+
+print 5120x2160 > $TS/display && print '200 60' > $TS/client
+ts TMUX=x -- 'termsize save' > /dev/null
+same "inside tmux the window's size is saved, not the pane's" "$(<$TSDIR/size-5120x2160)" "200 60"
+
+out=$(ts -- 'COLUMNS=10 LINES=3; termsize save'); rc=$?
+same "a size too small to be a window isn't saved" "$rc: $out $(<$TSDIR/size-5120x2160)" \
+  "1: termsize: 10 by 3 is too small to be a window's size; not saved 200 60"
+
+ts -- '_termsize_key=5120x2160 _termsize_prompts=5 _termsize_dirty=1; COLUMNS=150 LINES=40; _termsize_prompt' > /dev/null
+same "after a resize, the next prompt saves the size" "$(<$TSDIR/size-5120x2160) | $(<$TSDIR/size.toml)" "150 40 | $(toml 5120x2160 150 40)"
+
+print 1512x982 > $TS/display
+out=$(ts -- '_termsize_key=5120x2160 _termsize_prompts=5 _termsize_dirty=1; COLUMNS=170 LINES=45; _termsize_prompt; print -r -- $_termsize_key $_termsize_dirty')
+same "a resize that comes with a change of display isn't saved" \
+  "$out | $(ls $TSDIR | tr '\n' ' ')| $(<$TSDIR/size.toml)" \
+  "1512x982 0 | display size-5120x2160 size.toml | $(toml 1512x982 80 24)"
+out=$(ts -- '_termsize_key=1512x982 _termsize_prompts=5 _termsize_dirty=1; COLUMNS=100 LINES=30; _termsize_prompt')
+same "...and the next resize on that display is" "$(<$TSDIR/size-1512x982)" "100 30"
+
+print 5120x2160 > $TS/display
+ts -- '_termsize_prompt; sleep 1' > /dev/null
+same "a prompt notes the display in front, in the background, and writes its size" \
+  "$(<$TSDIR/display) | $(<$TSDIR/size.toml)" "5120x2160 | $(toml 5120x2160 150 40)"
+
+ts -- 'termsize forget' > /dev/null
+same "forget drops the display's size" "$(ls $TSDIR | tr '\n' ' ')| $(<$TSDIR/size.toml)" \
+  "display size-1512x982 size.toml | $(toml 5120x2160 80 24)"
+same "an unknown word is refused" "$(ts -- 'termsize nonsense'; print $?)" $'usage: termsize [save | forget]\n2'
+
+hooks() { env -u ALACRITTY_WINDOW_ID -u SSH_CONNECTION HOME=$TS/home TERM=xterm-256color "$@" zsh -f -i -c "source $TSFILE; print \${precmd_functions[(I)_termsize_prompt]:-0} \$+functions[TRAPWINCH]" 2>/dev/null }
+same "inside Alacritty the prompt hook and the resize trap are set" "$(hooks ALACRITTY_WINDOW_ID=1)" "1 1"
+same "...by its TERM too" "$(hooks TERM=alacritty)" "1 1"
+same "...but not in another terminal" "$(hooks)" "0 0"
+same "...nor over SSH" "$(hooks ALACRITTY_WINDOW_ID=1 SSH_CONNECTION=x)" "0 0"
+
+ALA=$REPO/alacritty/.config/alacritty/alacritty.toml
+same "alacritty.toml imports the size and sets none of its own" \
+  "$(grep -c '^import = \["~/.local/state/alacritty/size.toml"\]$' $ALA) $(grep -c '^\[window.dimensions\]' $ALA)" "1 0"
 
 # ─────────────────────────────────────────────────────────────
 section "update.sh"

@@ -9,10 +9,11 @@ keybindings.
 
 ## Summary for assistants
 
-- Shell is **zsh**. Four custom commands exist on every machine:
+- Shell is **zsh**. Five custom commands exist on every machine:
   `gitzip` (zip a repo, with its git history, for sharing), `newrepo`
-  (scaffold a Python project), `venv` (activate the nearest `.venv`) and
-  `dotup` (upgrade what these dotfiles installed).
+  (scaffold a Python project), `venv` (activate the nearest `.venv`),
+  `dotup` (upgrade what these dotfiles installed) and `termsize` (the
+  terminal window's size, remembered for each display).
 - **Changes land through `gh ship`.** Work happens one branch per change;
   after committing on the branch, `gh ship` pushes it, opens the PR, turns on
   auto-merge, waits for CI and the merge (a repo without CI merges at once),
@@ -116,6 +117,36 @@ dotup [--schedule | --unschedule]
 - Nothing needs `sudo`: apt packages stay manual.
 - Neovim's update rewrites `lazy-lock.json` here; commit it when the other
   machines should follow.
+
+### termsize — the window's size, remembered for each display
+
+Alacritty opens every window at one size. With this, a new window opens at
+the size last used on the display in front: small on the laptop's own
+screen, whatever you last dragged it to at the dock. There is nothing to
+run: resize a window, and at that shell's next prompt the size is saved.
+
+```bash
+termsize [save | forget]
+```
+
+| Command           | Does                                                        |
+|-------------------|-------------------------------------------------------------|
+| `termsize`        | Says which display is in front, the size saved for it, and this window's size |
+| `termsize save`   | Saves this window's size for that display now               |
+| `termsize forget` | Forgets that display's size: new windows there are 80 by 24 |
+
+- A display is known by its resolution (`5120x2160`); off macOS there is one
+  key, `default`, so it is simply the last size used.
+- The sizes are in `~/.local/state/alacritty/`, one file a display, and
+  `size.toml` there is what `alacritty.toml` imports. Nothing is written
+  into this repo.
+- `_termsize_prompt` runs before each prompt, inside Alacritty only (not over
+  SSH): it saves after a resize and, at most once a minute and in the
+  background, checks which display is in front.
+- A resize that comes with a change of display (undocking shrinks a window)
+  isn't saved. The first window after docking or undocking may still open
+  at the other display's size; the window's position isn't remembered.
+- Inside tmux the size saved is the window's, not the pane's.
 
 ### gh ship — land a change on the default branch
 
@@ -321,6 +352,9 @@ Sessions auto-save every 15 minutes and restore when tmux starts
 
 Plus Alacritty's defaults: `Cmd+C/V/N/Q` and `Cmd+0/=/-` on macOS,
 `Ctrl+Shift+C/V` on Linux/Windows.
+
+A new window opens at the size last used on the display in front
+(`termsize`, above); 80 by 24 where nothing is saved.
 
 ## install.sh
 
