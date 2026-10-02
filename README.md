@@ -60,10 +60,13 @@ Each holds a `[user]` block (name, email). Repos anywhere else use the
 - Edit the files here. Stow's links make changes live right away: open a
   new shell, `:source` in Neovim, or `Prefix r` in tmux.
 - New file in an existing package: usually nothing to do, since Stow links
-  whole folders where it can; otherwise `stow -R <package>`.
+  whole folders where it can; otherwise `stow -R <package>`, which `dotup`
+  also does for every package. (A new file that `.zshrc` sources isn't there
+  until one of the two has run.)
 - New package: create `<tool>/<path as it sits in ~>`, then add the folder
-  to the `for pkg in …` list in `install.sh`. A test checks the two match.
-- Upgrades: `dotup` upgrades Homebrew's packages, uv's Python and the Neovim
+  to the `for pkg in …` list in `install.sh` and in `update.sh`. Tests check
+  that all three match.
+- Upgrades: `dotup` relinks the packages, then upgrades Homebrew's packages, uv's Python and the Neovim
   and tmux plugins; `dotup --schedule` does it every Sunday at 03:30 and a
   failure shows up as one line at the next shell start. `install.sh` itself
   never upgrades anything.
@@ -85,15 +88,16 @@ touches your real setup. It checks:
   starts in, stays in emacs keys, and keeps its cache out of the repo.
 - **Functions:** `gitzip`, `newrepo` and `venv` behave as the cheat sheet
   says, run against throwaway repos and folders.
-- **update.sh:** with stand-ins for brew, uv, nvim and rustup on the `PATH`:
-  the steps run in order and are logged, a failing step is named and the
+- **update.sh:** with stand-ins for stow, brew, uv, nvim and rustup on the
+  `PATH`: every package is restowed first, the steps run in order and are logged, a failing step is named and the
   rest still run, the next shell reports it, and `--schedule` writes and
   removes the launchd agent and the systemd timer.
 - **gh ship:** against a stand-in for GitHub (`tests/fake-gh/gh`, backed by a
   real bare repo): a new PR, slow GitHub, a failed check and a rerun after the
   fix, an already-merged PR, a non-`main` default branch, conflicts, checks
   that never start, an interrupted wait, a repo without CI or auto-merge,
-  and a run from a linked worktree. Also that gh itself finds the
+  a run from a linked worktree, and one from a repo whose git dir sits
+  apart from its checkout. Also that gh itself finds the
   extension, and that the Codespaces install links it.
 - **Docs:** every function, alias, gh extension and Neovim mapping is in the cheat sheet,
   and every `<leader>` mapping the cheat sheet lists still exists.
