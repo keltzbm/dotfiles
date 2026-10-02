@@ -292,7 +292,7 @@ section "update.sh"
 # Stand-ins for the tools on PATH: each logs its name and arguments, and
 # exits with the code in $UP/fail-<tool>-<first argument> if that file exists.
 UP=$TMP/update && mkdir -p $UP/bin $UP/home/.tmux/plugins/tpm/bin
-for tool in brew uv nvim rustup launchctl systemctl; do
+for tool in stow brew uv nvim rustup launchctl systemctl; do
   print -r -- '#!/bin/sh
 echo "'$tool' $*" >> '$UP'/calls
 [ -f "'$UP'/fail-'$tool'-$1" ] && exit "$(cat "'$UP'/fail-'$tool'-$1")"
@@ -315,11 +315,13 @@ UPLOG=$UP/home/.local/state/dotfiles
 out=$(update); rc=$?
 same "runs every step and says so" "$rc: ${out##*$'\n'}" "0: Updated."
 same "steps run in order" "$(cut -d' ' -f1,2 $UP/calls | tr '\n' ',')" \
-  "brew update,brew upgrade,brew bundle,brew cleanup,uv python,nvim --headless,tpm all,rustup update,"
+  "${(pj::)${(l:7::x:)}//x/stow --target=$UP/home,}brew update,brew upgrade,brew bundle,brew cleanup,uv python,nvim --headless,tpm all,rustup update,"
+same "the restow covers install.sh's packages, in its order" "$(grep '^stow' $UP/calls | awk '{print $NF}' | tr '\n' ' ')" \
+  "$(sed -n 's/^for pkg in \(.*\); do$/\1/p' $REPO/install.sh) "
 same "brew bundle reads this repo's Brewfile" "$(grep '^brew bundle' $UP/calls)" "brew bundle --file=$REPO/Brewfile"
 same "every step is logged with a UTC time" \
   "$(sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z //' $UPLOG/update.log | tr '\n' ',')" \
-  "brew update ok,brew upgrade ok,brew bundle ok,brew cleanup ok,uv python ok,nvim plugins ok,tmux plugins ok,rustup ok,"
+  "stow ok,brew update ok,brew upgrade ok,brew bundle ok,brew cleanup ok,uv python ok,nvim plugins ok,tmux plugins ok,rustup ok,"
 
 : > $UP/calls; print 3 > $UP/fail-brew-upgrade
 out=$(update); rc=$?
@@ -500,6 +502,25 @@ same "...says how to finish" "${lines[-1]}" \
   "gh ship: to finish: cd ${FAKE_GH:A}/work && git worktree remove ${FAKE_GH:A}/wt && git branch -D change"
 same "...with the change pulled there, and this worktree left alone" \
   "$(cat $FAKE_GH/work/change.txt) $(git -C $FAKE_GH/work branch --show-current) $(git branch --show-current)" "change main change"
+
+# a repo whose git dir sits apart from its checkout (a .git file points at it)
+ship_repo apart
+git switch -q main && mv .git $FAKE_GH/apart.git && print "gitdir: $FAKE_GH/apart.git" > .git
+git worktree add -q $FAKE_GH/wt change && cd $FAKE_GH/wt
+out=$(ship); rc=$?
+same "a git dir apart from its checkout: merges, then says the checkout must be pulled by hand" "$rc: $(last $out)" \
+  "1: gh ship: change is merged on GitHub, but main isn't updated here: ${FAKE_GH:A}/apart.git is a git dir kept apart from its checkout. Run git pull --ff-only in the checkout. To have gh ship do it, name the checkout once: git --git-dir ${FAKE_GH:A}/apart.git config core.worktree <checkout>"
+same "...and the PR is merged" "$(<$FAKE_GH/state)" "MERGED"
+
+ship_repo apart-named
+git switch -q main && mv .git $FAKE_GH/apart.git && print "gitdir: $FAKE_GH/apart.git" > .git
+git --git-dir $FAKE_GH/apart.git config core.worktree $FAKE_GH/work
+git worktree add -q $FAKE_GH/wt change && cd $FAKE_GH/wt
+out=$(ship); rc=$?
+lines=( ${(f)out} )
+same "...with core.worktree naming the checkout: updates main there" "$rc: ${lines[-2]}" \
+  "0: gh ship: change is merged and main is up to date in ${FAKE_GH:A}/work"
+same "...with the change pulled into the checkout" "$(cat $FAKE_GH/work/change.txt)" "change"
 cd $REPO
 
 if have gh; then

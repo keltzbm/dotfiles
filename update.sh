@@ -6,7 +6,8 @@
 #                             a systemd user timer on Linux)
 #   ./update.sh --unschedule  stop the weekly run
 #
-# Steps, in order: Homebrew (update, upgrade, the Brewfile, cleanup), uv's
+# Steps, in order: the dotfiles' own links (each package restowed, so a file a
+# pull added is linked), Homebrew (update, upgrade, the Brewfile, cleanup), uv's
 # default Python, Neovim's plugins, tmux's plugins, rustup where it's
 # installed. A step whose tool is missing is skipped; a step that fails is
 # logged and the rest still run. Nothing here needs sudo, so apt stays yours.
@@ -122,6 +123,19 @@ step() {
   fi
 }
 
+# Stow links a package's files one by one where its folder already exists in ~,
+# so a file a pull added isn't linked until its package is restowed.
+restow() {
+  local pkg
+  for pkg in nvim alacritty starship tmux zsh git gh; do
+    [[ -d "$DOTFILES/$pkg" ]] || continue
+    (cd "$DOTFILES" && stow --target="$HOME" --restow "$pkg") || return 1
+  done
+}
+
+if have stow; then
+  step "stow" restow
+fi
 if have brew; then
   step "brew update" brew update
   step "brew upgrade" brew upgrade

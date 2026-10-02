@@ -7,7 +7,8 @@
 # GitHub, then switches to the base branch, pulls, and deletes the change's
 # branch. A repo with no workflows in .github/workflows has no checks to wait
 # for, so its PR is merged at once. Run from a linked worktree, it updates
-# the base branch in the main checkout and says how to remove the worktree.
+# the base branch in the main checkout and says how to remove the worktree
+# (a git dir kept apart from its checkout has to name it in core.worktree).
 #
 # Safe to rerun at any point, and Ctrl-C during a wait changes nothing.
 # A failed check exits non-zero and nothing merges: fix, commit, rerun.
@@ -117,6 +118,13 @@ fi
 # its common dir.)
 if [ "$(git rev-parse --path-format=absolute --git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
   main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+  # A git dir kept apart from its checkout lists itself as the main worktree.
+  # Nothing can be pulled there; its core.worktree, when set, names the checkout.
+  if [ "$(git -C "$main" rev-parse --is-inside-work-tree 2>/dev/null)" != true ]; then
+    checkout=$(git -C "$main" config --get core.worktree) ||
+      die "$b is merged on GitHub, but $target isn't updated here: $main is a git dir kept apart from its checkout. Run git pull --ff-only in the checkout. To have gh ship do it, name the checkout once: git --git-dir $main config core.worktree <checkout>"
+    main=$(cd "$main" && cd "$checkout" && pwd) || die "$b is merged on GitHub, but core.worktree in $main names no folder ($checkout)."
+  fi
   if [ "$(git -C "$main" branch --show-current 2>/dev/null)" = "$target" ]; then
     git -C "$main" pull --ff-only || die "couldn't fast-forward $target in $main (see above)."
   else

@@ -106,7 +106,7 @@ dotup [--schedule | --unschedule]
 
 | Command              | Does                                                        |
 |----------------------|-------------------------------------------------------------|
-| `dotup`              | Runs `update.sh` now: Homebrew (update, upgrade, the Brewfile, cleanup), uv's default Python, Neovim's plugins, tmux's plugins, rustup where it's installed |
+| `dotup`              | Runs `update.sh` now: the dotfiles' own links (every package restowed, so a file a pull added is linked), Homebrew (update, upgrade, the Brewfile, cleanup), uv's default Python, Neovim's plugins, tmux's plugins, rustup where it's installed |
 | `dotup --schedule`   | Runs it every Sunday at 03:30 (launchd on macOS, a systemd user timer on Linux) |
 | `dotup --unschedule` | Stops the weekly run                                        |
 
@@ -142,7 +142,10 @@ change is merged or something has clearly failed:
    there, then switches to the branch it merged into, pulls, and deletes the
    local branch. In a linked worktree, which can't switch to a branch the main
    checkout has, it pulls in the main checkout instead and prints the command
-   that removes the worktree and the branch.
+   that removes the worktree and the branch. A repo whose git dir sits apart
+   from its checkout (a `.git` file pointing elsewhere) has to name the
+   checkout once, `git --git-dir <git dir> config core.worktree <checkout>`;
+   without that the PR still merges, and gh ship says to pull in the checkout.
 
 - Safe to rerun at any point; Ctrl-C during a wait changes nothing.
 - If the PR is already merged it goes straight to step 6, unless the branch
