@@ -66,6 +66,9 @@ Each holds a `[user]` block (name, email). Repos anywhere else use the
 - New package: create `<tool>/<path as it sits in ~>`, then add the folder
   to the `for pkg in …` list in `install.sh` and in `update.sh`. Tests check
   that all three match.
+- Terminal size: Alacritty opens a window at the size last used on the
+  display in front (`termsize`); the sizes live in `~/.local/state/alacritty/`,
+  outside the repo.
 - Upgrades: `dotup` relinks the packages, then upgrades Homebrew's packages, uv's Python and the Neovim
   and tmux plugins; `dotup --schedule` does it every Sunday at 03:30 and a
   failure shows up as one line at the next shell start. `install.sh` itself

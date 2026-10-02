@@ -7,6 +7,15 @@
 # Location (Windows): %APPDATA%\alacritty\alacritty.toml
 #   or WSL2 symlink:  ~/.config/alacritty/alacritty.toml → /mnt/c/Users/<you>/AppData/Roaming/alacritty/alacritty.toml
 
+# ── Window size ────────────────────────────────────────────────
+# The size of a new window is the size last used on the display in front:
+# termsize (zsh/.config/zsh/functions/termsize.zsh) writes it to this file.
+# With no file, or on a display never resized on, it is 80 by 24, the VT100's.
+# [window.dimensions] must not be set below: this file would override the import.
+
+[general]
+import = ["~/.local/state/alacritty/size.toml"]
+
 # ── Window ─────────────────────────────────────────────────────
 
 [window]
@@ -20,12 +29,6 @@ startup_mode = "Windowed"
 title = "Alacritty"
 # Show current directory/process in title bar
 dynamic_title = true
-
-[window.dimensions]
-# VT100 standard — the original 80-column terminal
-columns = 80
-# VT100 standard — 24 lines
-lines = 24
 
 # ── Scrolling ──────────────────────────────────────────────────
 
