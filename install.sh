@@ -108,4 +108,15 @@ echo "Installing tmux plugins..."
 [[ -d "$HOME/.tmux/plugins/tpm" ]] || git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
 "$HOME/.tmux/plugins/tpm/bin/install_plugins" > /dev/null
 
+# atuin keeps every command. The first time (its history is empty), bring this
+# machine's zsh history in; never twice. Sharing it between machines takes
+# `atuin register` or `atuin login` by hand (CHEATSHEET.md)
+import_history() {
+  command -v atuin &> /dev/null && [[ -s "$HOME/.zsh_history" ]] || return 0
+  [[ -z "$(atuin history list --cmd-only 2>/dev/null | head -1)" ]] || return 0
+  echo "Importing zsh history into atuin..."
+  atuin import zsh || echo "atuin import failed; run atuin import zsh by hand"
+}
+import_history
+
 echo "Dotfiles synced!"

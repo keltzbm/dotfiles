@@ -56,9 +56,12 @@ export EZA_COLORS="mp=1;34"
 # ─────────────────────────────────────────────────────────────
 # History
 # ─────────────────────────────────────────────────────────────
+# 100,000 commands, each with when it ran: the file atuin imports from on a
+# new machine (atuin itself keeps every command, with no limit)
 HISTFILE="$HOME/.zsh_history"
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=100000
+SAVEHIST=100000
+setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt SHARE_HISTORY
 
