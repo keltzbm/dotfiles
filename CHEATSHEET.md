@@ -32,7 +32,8 @@ keybindings.
   (work); git picks the identity by folder.
 - `ls` is eza, `vi`/`vim` open Neovim, and `EDITOR=nvim`.
 - Installed everywhere (the `Brewfile`): `rg`, `fd`, `bat`, `fzf`, `zoxide`,
-  `eza`, `gh`, `uv`, `deno`, `node`, `duckdb`, `shellcheck`, `stow`, `git-lfs`, `stylua`.
+  `atuin`, `delta`, `lazygit`, `eza`, `gh`, `uv`, `deno`, `node`, `duckdb`,
+  `shellcheck`, `stow`, `git-lfs`, `stylua`.
 
 ## Shell commands
 
@@ -214,8 +215,11 @@ Installed by `install.sh` on every machine (Homebrew).
 | ripgrep    | `rg <pattern>`                      | Search file contents (respects .gitignore)                   |
 | fd         | `fd <name>`                         | Find files by name                                           |
 | bat        | `bat <file>`                        | `cat` with syntax highlighting                               |
-| fzf        | `Ctrl-R` / `Ctrl-T` / `Alt-C`       | Fuzzy history search / insert a file path / cd into a folder |
+| fzf        | `Ctrl-T` / `Alt-C`                  | Insert a file path / cd into a folder (and `Ctrl-R` without atuin) |
+| atuin      | `Ctrl-R`                            | Search the shell history of every machine; up arrow unchanged |
 | zoxide     | `z <part of path>` / `zi`           | Jump to a visited folder / pick one interactively            |
+| lazygit    | `lazygit`                           | Full-screen git: stage hunks, browse log, resolve conflicts  |
+| delta      | automatic                           | git's pager: diffs with syntax colors; `n`/`N` jump between files |
 | eza        | via the aliases above               | `ls` replacement                                             |
 | gh         | `gh pr create`, `gh repo view`, ... | GitHub CLI                                                   |
 | uv         | `uv sync`, `uv run`, `uv add`       | Python versions, venvs, dependencies                         |
@@ -227,12 +231,19 @@ Installed by `install.sh` on every machine (Homebrew).
 | stylua     | automatic                           | Lua formatter (Neovim formats on save)                       |
 | stow       | `stow -R <package>`                 | Re-link a dotfiles package                                   |
 
+atuin, the first time on a machine: `atuin import zsh` brings in the history
+you have. To share it between machines, `atuin register` on the first one
+(keep the key `atuin key` prints in 1Password), then `atuin login` with that
+key on each other one. Until then the history stays on the machine it's from.
+
 ## Git
 
 - Identity by folder: `~/atelier/github/` → `~/.gitconfig-personal`,
   `~/atelier/gitlab/` → `~/.gitconfig-gitlab`; elsewhere the `[user]` in
   `.gitconfig`.
 - `git difftool` opens the diff in Neovim (`nvim -d`), no prompt.
+- `git diff`, `git log -p`, `git show` and `git add -p` page through delta
+  (syntax colors, `n`/`N` between files); plain `less` where delta isn't installed.
 - `https://github.com/…` URLs are rewritten to SSH.
 - New repos start on `main`.
 
