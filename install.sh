@@ -113,7 +113,11 @@ echo "Installing tmux plugins..."
 # `atuin register` or `atuin login` by hand (CHEATSHEET.md)
 import_history() {
   command -v atuin &> /dev/null && [[ -s "$HOME/.zsh_history" ]] || return 0
-  [[ -z "$(atuin history list --cmd-only 2>/dev/null | head -1)" ]] || return 0
+  # atuin answers only with a session id, which shells that load it set; one it
+  # can't read is left alone, not imported twice
+  local kept
+  kept=$(ATUIN_SESSION=$(atuin uuid 2>/dev/null) atuin history list --cmd-only 2>/dev/null) || return 0
+  [[ -z "$kept" ]] || return 0
   echo "Importing zsh history into atuin..."
   atuin import zsh || echo "atuin import failed; run atuin import zsh by hand"
 }

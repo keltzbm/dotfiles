@@ -193,20 +193,26 @@ IH=$TMP/import && mkdir -p $IH/bin $IH/home
 cat > $IH/bin/atuin <<'SH'
 #!/bin/sh
 case "$1 $2" in
-  "history list") [ -n "$FAKE_HISTORY" ] && echo ls ;;
+  "uuid ") echo 0123-test-session ;;
+  "history list")
+    [ -n "$ATUIN_SESSION" ] || { echo "Failed to find \$ATUIN_SESSION" >&2; exit 1; }
+    [ -z "$FAKE_LIST_FAIL" ] || exit 1
+    if [ -n "$FAKE_HISTORY" ]; then echo ls; fi ;;
   "import zsh") echo import >> "${0%/*}/calls"; [ -z "$FAKE_FAIL" ] ;;
 esac
 exit $?
 SH
 chmod +x $IH/bin/atuin
 print ls > $IH/home/.zsh_history
-run_import() { env HOME=$IH/home PATH=$IH/bin:/usr/bin:/bin "$@" bash -c "set -e; $fn"$'\nimport_history\necho "rc=$?"' 2>&1; }
+run_import() { env -u ATUIN_SESSION HOME=$IH/home PATH=$IH/bin:/usr/bin:/bin "$@" bash -c "set -e; $fn"$'\nimport_history\necho "rc=$?"' 2>&1; }
 rm -f $IH/bin/calls
 same "atuin with no history: install.sh imports the zsh history" "$(run_import)" $'Importing zsh history into atuin...\nrc=0'
 same "...once" "$(<$IH/bin/calls)" "import"
 rm -f $IH/bin/calls
-same "atuin with history already: nothing imported" "$(run_import FAKE_HISTORY=1)" "rc=0"
+same "atuin with history already: nothing imported, from a shell where atuin isn't loaded" "$(run_import FAKE_HISTORY=1)" "rc=0"
 [[ -e $IH/bin/calls ]] && fail "...and atuin isn't asked to" "$(<$IH/bin/calls)" || pass "...and atuin isn't asked to"
+same "atuin's history can't be read: left alone, not imported twice" "$(run_import FAKE_LIST_FAIL=1)" "rc=0"
+[[ -e $IH/bin/calls ]] && fail "...and nothing is imported" "$(<$IH/bin/calls)" || pass "...and nothing is imported"
 same "a failed import says so and the install goes on" "$(run_import FAKE_FAIL=1)" \
   $'Importing zsh history into atuin...\natuin import failed; run atuin import zsh by hand\nrc=0'
 same "no atuin installed: skipped quietly" "$(env HOME=$IH/home PATH=/usr/bin:/bin bash -c "$fn"$'\nimport_history\necho "rc=$?"' 2>&1)" "rc=0"
@@ -427,6 +433,18 @@ ts -- 'termsize forget' > /dev/null
 same "forget drops the display's size" "$(ls $TSDIR | tr '\n' ' ')| $(<$TSDIR/size.toml)" \
   "display size-1512x982 size.toml | $(toml 5120x2160 80 24)"
 same "an unknown word is refused" "$(ts -- 'termsize nonsense'; print $?)" $'usage: termsize [save | forget]\n2'
+
+# Two seconds after the last resize the size is saved, with no new prompt
+print 5120x2160 > $TS/display
+ts -- '_termsize_key=5120x2160 _termsize_prompts=5 _termsize_dirty=1 _termsize_resized=$((EPOCHSECONDS-2)); COLUMNS=160 LINES=44; _termsize_after_resize' > /dev/null
+same "two seconds after a resize, the size is saved without a new prompt" "$(<$TSDIR/size-5120x2160) | $(<$TSDIR/size.toml)" "160 44 | $(toml 5120x2160 160 44)"
+out=$(ts -- '_termsize_key=5120x2160 _termsize_prompts=5 _termsize_dirty=1 _termsize_resized=$EPOCHSECONDS; COLUMNS=120 LINES=30; _termsize_after_resize; print -r -- $_termsize_dirty')
+same "during a drag, an earlier resize's timer saves nothing" "$out | $(<$TSDIR/size-5120x2160)" "1 | 160 44"
+same "the save after a resize prints nothing over the prompt" \
+  "$(ts -- '_termsize_key=5120x2160 _termsize_prompts=5 _termsize_dirty=1 _termsize_resized=$((EPOCHSECONDS-2)); COLUMNS=10 LINES=3; _termsize_after_resize')" ""
+same "...and a window that small isn't saved" "$(<$TSDIR/size-5120x2160)" "160 44"
+same "the resize trap sets the two-second timer" \
+  "$(env -u SSH_CONNECTION HOME=$TS/home ALACRITTY_WINDOW_ID=1 PATH=$TS/bin:/usr/bin:/bin zsh -f -i -c "source $TSFILE; TRAPWINCH; sched" 2>/dev/null | grep -c '_termsize_after_resize$')" "1"
 
 hooks() { env -u ALACRITTY_WINDOW_ID -u SSH_CONNECTION HOME=$TS/home TERM=xterm-256color "$@" zsh -f -i -c "source $TSFILE; print \${precmd_functions[(I)_termsize_prompt]:-0} \$+functions[TRAPWINCH]" 2>/dev/null }
 same "inside Alacritty the prompt hook and the resize trap are set" "$(hooks ALACRITTY_WINDOW_ID=1)" "1 1"

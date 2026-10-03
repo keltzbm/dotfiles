@@ -124,7 +124,8 @@ dotup [--schedule | --unschedule]
 Alacritty opens every window at one size. With this, a new window opens at
 the size last used on the display in front: small on the laptop's own
 screen, whatever you last dragged it to at the dock. There is nothing to
-run: resize a window, and at that shell's next prompt the size is saved.
+run: resize a window, and two seconds after you let go the size is saved,
+so you can close it right away.
 
 ```bash
 termsize [save | forget]
@@ -141,9 +142,12 @@ termsize [save | forget]
 - The sizes are in `~/.local/state/alacritty/`, one file a display, and
   `size.toml` there is what `alacritty.toml` imports. Nothing is written
   into this repo.
-- `_termsize_prompt` runs before each prompt, inside Alacritty only (not over
-  SSH): it saves after a resize and, at most once a minute and in the
-  background, checks which display is in front.
+- Inside Alacritty only (not over SSH), a resize sets a two-second timer,
+  `_termsize_after_resize`; while the shell waits at its prompt, the last
+  resize's timer saves the size with `_termsize_settle`, printing nothing.
+  `_termsize_prompt` runs before each prompt: it saves a resize the timer
+  hasn't yet (one made while a command ran) and, at most once a minute and in
+  the background, checks which display is in front.
 - A resize that comes with a change of display (undocking shrinks a window)
   isn't saved. The first window after docking or undocking may still open
   at the other display's size; the window's position isn't remembered.
