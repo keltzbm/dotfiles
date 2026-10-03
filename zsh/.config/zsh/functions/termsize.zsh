@@ -8,9 +8,10 @@
 #   termsize forget   forget that display's size (back to 80 by 24)
 #
 # How: alacritty.toml imports ~/.local/state/alacritty/size.toml, which holds
-# [window.dimensions]. Inside Alacritty, a resize marks the shell; at its next
-# prompt the window's size is saved under the display's resolution and
-# size.toml is rewritten. Each prompt also checks, at most once a minute and
+# [window.dimensions]. Inside Alacritty, a resize marks the shell; two seconds
+# after the last one (while it waits at a prompt), or at its next prompt, the
+# window's size is saved under the display's resolution and size.toml is
+# rewritten, so closing the window right after a resize still keeps it. Each prompt also checks, at most once a minute and
 # in the background, which display is in front, and rewrites size.toml for it.
 # A resize that arrives together with a change of display is the system
 # moving the window (undocking), not a choice, and isn't saved.
@@ -19,11 +20,11 @@
 # display's size; the window's position isn't remembered; off macOS there is
 # one key, "default", so it is simply the last size used.
 
-zmodload zsh/datetime
+zmodload zsh/datetime zsh/sched
 
 typeset -g _termsize_dir=$HOME/.local/state/alacritty
 typeset -g _termsize_key=
-typeset -gi _termsize_dirty=0 _termsize_checked=0 _termsize_prompts=0
+typeset -gi _termsize_dirty=0 _termsize_checked=0 _termsize_prompts=0 _termsize_resized=0
 
 termsize() {
   local dir=$_termsize_dir key size text
@@ -81,19 +82,33 @@ termsize() {
   esac
 }
 
+# A resize, kept: the window's size under the display in front, unless the
+# display changed too. Quiet, since it can run while the prompt is on screen
+_termsize_settle() {
+  local now seen=$_termsize_dir/display
+  (( _termsize_dirty )) || return 0
+  _termsize_dirty=0
+  # a shell this new has only the last shell's word for the display: take the latest
+  (( _termsize_prompts <= 2 )) && [[ -r $seen ]] && _termsize_key=$(<$seen)
+  now=$(termsize display)
+  [[ $now == $_termsize_key ]] && termsize save $now 2>/dev/null
+  _termsize_key=$now _termsize_checked=$EPOCHSECONDS
+  mkdir -p $_termsize_dir && print -r -- $now >| $seen
+  termsize apply $now
+}
+
+# Two seconds after a resize: a drag sends many, and only the last one's timer saves
+_termsize_after_resize() {
+  (( EPOCHSECONDS - _termsize_resized >= 2 )) && _termsize_settle
+  return 0
+}
+
 # Runs before each prompt, inside Alacritty only
 _termsize_prompt() {
-  local now seen=$_termsize_dir/display
+  local seen=$_termsize_dir/display
   (( _termsize_prompts++ ))
   if (( _termsize_dirty )); then
-    _termsize_dirty=0
-    # a shell this new has only the last shell's word for the display: take the latest
-    (( _termsize_prompts <= 2 )) && [[ -r $seen ]] && _termsize_key=$(<$seen)
-    now=$(termsize display)
-    [[ $now == $_termsize_key ]] && termsize save $now
-    _termsize_key=$now _termsize_checked=$EPOCHSECONDS
-    mkdir -p $_termsize_dir && print -r -- $now >| $seen
-    termsize apply $now
+    _termsize_settle
     return 0
   fi
   if (( EPOCHSECONDS - _termsize_checked >= 60 )); then
@@ -107,5 +122,5 @@ _termsize_prompt() {
 if [[ -o interactive && -z ${SSH_CONNECTION-} ]] && [[ -n ${ALACRITTY_WINDOW_ID-} || $TERM == alacritty* ]]; then
   autoload -Uz add-zsh-hook
   add-zsh-hook precmd _termsize_prompt
-  TRAPWINCH() { _termsize_dirty=1 }
+  TRAPWINCH() { _termsize_dirty=1 _termsize_resized=$EPOCHSECONDS; sched +2 _termsize_after_resize }
 fi
