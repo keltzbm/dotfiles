@@ -156,8 +156,12 @@ same "EDITOR/VISUAL come from .zshenv" "$(cd $ZH && env -u EDITOR -u VISUAL HOME
 dumps_after=( $REPO/zsh/.config/zsh/.zcompdump*(N) )
 same "no completion cache written into the repo" "${#dumps_after}" "${#dumps_before}"
 
-# atuin: loaded in a terminal (after fzf, so it owns Ctrl-R), never without one
-FA=$TMP/fake-atuin && mkdir -p $FA
+same "history keeps 100,000 commands with when each ran" \
+  "$(run_zsh 'print $HISTSIZE $SAVEHIST; [[ -o extendedhistory ]] && print with-times' 2>/dev/null)" $'100000 100000\nwith-times'
+
+# atuin: loaded in a terminal (after fzf, so it owns Ctrl-R), never without one.
+# The fake goes in ~/.local/bin, which .zshrc puts ahead of Homebrew's real one
+FA=$ZH/.local/bin && mkdir -p $FA
 cat > $FA/atuin <<'SH'
 #!/bin/sh
 echo "$*" > "${0%/*}/args"
@@ -181,6 +185,36 @@ rm -f $FA/args
 (cd $ZH/project/sub && env HOME=$ZH PATH=$FA:$PATH zsh -i -c true </dev/null >/dev/null 2>&1)
 [[ -e $FA/args ]] && fail "atuin isn't loaded without a terminal" "it ran: $(<$FA/args)" \
   || pass "atuin isn't loaded without a terminal"
+rm -f $FA/atuin $FA/args
+
+# install.sh's import_history: once, the first time, and a failure doesn't stop the install
+fn=$(sed -n '/^import_history() {/,/^}/p' $REPO/install.sh)
+IH=$TMP/import && mkdir -p $IH/bin $IH/home
+cat > $IH/bin/atuin <<'SH'
+#!/bin/sh
+case "$1 $2" in
+  "history list") [ -n "$FAKE_HISTORY" ] && echo ls ;;
+  "import zsh") echo import >> "${0%/*}/calls"; [ -z "$FAKE_FAIL" ] ;;
+esac
+exit $?
+SH
+chmod +x $IH/bin/atuin
+print ls > $IH/home/.zsh_history
+run_import() { env HOME=$IH/home PATH=$IH/bin:/usr/bin:/bin "$@" bash -c "set -e; $fn"$'\nimport_history\necho "rc=$?"' 2>&1; }
+rm -f $IH/bin/calls
+same "atuin with no history: install.sh imports the zsh history" "$(run_import)" $'Importing zsh history into atuin...\nrc=0'
+same "...once" "$(<$IH/bin/calls)" "import"
+rm -f $IH/bin/calls
+same "atuin with history already: nothing imported" "$(run_import FAKE_HISTORY=1)" "rc=0"
+[[ -e $IH/bin/calls ]] && fail "...and atuin isn't asked to" "$(<$IH/bin/calls)" || pass "...and atuin isn't asked to"
+same "a failed import says so and the install goes on" "$(run_import FAKE_FAIL=1)" \
+  $'Importing zsh history into atuin...\natuin import failed; run atuin import zsh by hand\nrc=0'
+same "no atuin installed: skipped quietly" "$(env HOME=$IH/home PATH=/usr/bin:/bin bash -c "$fn"$'\nimport_history\necho "rc=$?"' 2>&1)" "rc=0"
+rm $IH/home/.zsh_history
+rm -f $IH/bin/calls
+same "no zsh history yet: skipped quietly" "$(run_import)" "rc=0"
+calls=( ${(f)"$(grep -nE '^import_history$|^  stow --target' $REPO/install.sh | cut -d: -f2-)"} )
+same "install.sh imports after stowing the dotfiles" "${calls[*]}" "  stow --target=\"\$HOME\" \"\$pkg\" import_history"
 
 # ─────────────────────────────────────────────────────────────
 section "Git"

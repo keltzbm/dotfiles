@@ -231,8 +231,9 @@ Installed by `install.sh` on every machine (Homebrew).
 | stylua     | automatic                           | Lua formatter (Neovim formats on save)                       |
 | stow       | `stow -R <package>`                 | Re-link a dotfiles package                                   |
 
-atuin, the first time on a machine: `atuin import zsh` brings in the history
-you have. To share it between machines, `atuin register` on the first one
+atuin, the first time on a machine: `install.sh` brings in the zsh history
+you have (or run `atuin import zsh`); atuin keeps every command from then on,
+and zsh's own file the last 100,000, with times. To share it between machines, `atuin register` on the first one
 (keep the key `atuin key` prints in 1Password), then `atuin login` with that
 key on each other one. Until then the history stays on the machine it's from.
 
@@ -374,7 +375,8 @@ install Homebrew if missing, install everything in the `Brewfile`
 (`brew bundle`; the tools above plus zsh, tmux, neovim, starship and git),
 make uv's Python 3.14 the default, install a few apt packages on Linux, build
 Alacritty from source if it's missing (skipped under WSL, where it runs on
-Windows), stow every package into `~`, then install TPM and the tmux plugins.
+Windows), stow every package into `~`, install TPM and the tmux plugins, then
+import the zsh history into atuin if atuin has none yet.
 
 In a GitHub Codespace it only links the gh extensions (`gh ship`) and stops:
 the codespace image already has git and a signed-in gh.
