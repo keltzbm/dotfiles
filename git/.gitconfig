@@ -8,6 +8,12 @@
 	email = keltzbm@icloud.com
 [core]
 	excludesfile = ~/.gitignore_global
+	# delta shows diffs with syntax colors; plain less where it isn't installed
+	pager = "if command -v delta >/dev/null 2>&1; then exec delta; else exec less; fi"
+[interactive]
+	diffFilter = "if command -v delta >/dev/null 2>&1; then exec delta --color-only; else exec cat; fi"
+[delta]
+	navigate = true
 [diff]
 	tool = nvimdiff
 [difftool "nvimdiff"]

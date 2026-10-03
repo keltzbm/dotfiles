@@ -135,5 +135,10 @@ fi
 # zoxide: `z <part of a path>` jumps to a folder you've visited; `zi` picks one
 (( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 
+# atuin: Ctrl-R searches the history of every machine (end-to-end encrypted
+# after `atuin login`); it takes Ctrl-R from fzf, and the up arrow stays
+# zsh's own. Terminal only, like fzf: no history from shells editors start
+[[ -t 0 ]] && (( $+commands[atuin] )) && eval "$(atuin init zsh --disable-up-arrow)"
+
 # Prompt (keep last)
 (( $+commands[starship] )) && eval "$(starship init zsh)"

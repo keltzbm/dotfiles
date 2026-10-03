@@ -156,6 +156,48 @@ same "EDITOR/VISUAL come from .zshenv" "$(cd $ZH && env -u EDITOR -u VISUAL HOME
 dumps_after=( $REPO/zsh/.config/zsh/.zcompdump*(N) )
 same "no completion cache written into the repo" "${#dumps_after}" "${#dumps_before}"
 
+# atuin: loaded in a terminal (after fzf, so it owns Ctrl-R), never without one
+FA=$TMP/fake-atuin && mkdir -p $FA
+cat > $FA/atuin <<'SH'
+#!/bin/sh
+echo "$*" > "${0%/*}/args"
+[ "$1 $2" = "init zsh" ] && printf '%s\n' 'atuin-search() { :; }' 'zle -N atuin-search' "bindkey '^r' atuin-search"
+exit 0
+SH
+chmod +x $FA/atuin
+in_tty() {  # run a command with a terminal on stdin (script differs on macOS and Linux)
+  if [[ $(uname) == Darwin ]]; then script -q /dev/null "$@"; else script -qec "${(j: :)${(q)@}}" /dev/null; fi
+}
+if ! have script; then
+  skip "atuin in a terminal" "needs script"
+else
+  out=$(cd $ZH/project/sub && in_tty env HOME=$ZH PATH=$FA:$PATH zsh -i -c 'bindkey "^r"' 2>/dev/null </dev/null | tr -d '\r')
+  # the terminal echoes ^D when its input ends, so look for the binding itself
+  [[ $out == *'"^R" atuin-search'* ]] && pass "atuin owns Ctrl-R in a terminal" \
+    || fail "atuin owns Ctrl-R in a terminal" "got: $out"
+  same "atuin leaves the up arrow alone" "$(<$FA/args)" "init zsh --disable-up-arrow"
+fi
+rm -f $FA/args
+(cd $ZH/project/sub && env HOME=$ZH PATH=$FA:$PATH zsh -i -c true </dev/null >/dev/null 2>&1)
+[[ -e $FA/args ]] && fail "atuin isn't loaded without a terminal" "it ran: $(<$FA/args)" \
+  || pass "atuin isn't loaded without a terminal"
+
+# ─────────────────────────────────────────────────────────────
+section "Git"
+# ─────────────────────────────────────────────────────────────
+GC=$REPO/git/.gitconfig
+pager=$(git config -f $GC core.pager)
+filter=$(git config -f $GC interactive.diffFilter)
+FD=$TMP/fake-delta && mkdir -p $FD
+printf '%s\n' '#!/bin/sh' 'echo "delta:$*"' > $FD/delta && chmod +x $FD/delta
+same "git pages through delta when it's installed" "$(print diff | env PATH=$FD:/usr/bin:/bin sh -c "$pager")" "delta:"
+same "git pages through plain less without delta" "$(print diff | env PATH=/usr/bin:/bin sh -c "$pager")" "diff"
+same "git add -p colors through delta when it's installed" "$(print diff | env PATH=$FD:/usr/bin:/bin sh -c "$filter")" "delta:--color-only"
+same "git add -p passes the diff through unchanged without delta" "$(print diff | env PATH=/usr/bin:/bin sh -c "$filter")" "diff"
+for tool in atuin git-delta lazygit; do
+  grep -qx "brew \"$tool\"" $REPO/Brewfile && pass "Brewfile installs $tool" || fail "Brewfile installs $tool"
+done
+
 # ─────────────────────────────────────────────────────────────
 section "gitzip"
 # ─────────────────────────────────────────────────────────────
